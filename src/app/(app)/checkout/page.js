@@ -8,6 +8,17 @@ import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
 import { Package, CreditCard, Truck, ArrowLeft } from "lucide-react";
 
+// Utility to load Razorpay script dynamically
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
   const { cart, clearCart } = useCart();
@@ -54,8 +65,9 @@ export default function CheckoutPage() {
       return toast.error("Invalid order amount");
     }
 
-    if (isTestMode && total > 50000) {
-      return toast.error("Amount exceeds test mode limit of ₹50,000");
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      return toast.error("Failed to load payment gateway. Check connection.");
     }
 
     setPlacingOrder(true);
@@ -78,6 +90,7 @@ export default function CheckoutPage() {
         return;
       }
 
+      // 1. CREATE ORDER (Backend creates both DB Order AND Razorpay Order)
       const payload = {
         items: cart.map((item) => ({
           productId: item._id || item.id,
@@ -96,26 +109,95 @@ export default function CheckoutPage() {
         },
       };
 
-      const res = await fetch(`${API_BASE}/api/orders/createOrderByCustomer`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const dbOrderRes = await fetch(
+        `${API_BASE}/api/orders/createOrderByCustomer`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error("Order failed. Please try again.");
+      if (!dbOrderRes.ok) {
+        const errorText = await dbOrderRes.text();
+        throw new Error("Failed to create order. Server error.");
       }
 
-      toast.success("Order placed successfully!");
-      clearCart();
-      localStorage.removeItem("cart");
-      router.push("/orders");
+      const responseJson = await dbOrderRes.json();
+
+      const orderData = responseJson.data;
+
+      if (!orderData || !orderData.order || !orderData.razorpayOrder) {
+        console.error("Invalid structure:", responseJson);
+        throw new Error("Order created, but payment details are missing.");
+      }
+
+      const internalOrderId = orderData.order._id;
+      const razorpayOrderId = orderData.razorpayOrder.id;
+      const razorpayAmount = orderData.razorpayOrder.amount;
+      const razorpayCurrency = orderData.razorpayOrder.currency;
+
+      // 2. OPEN RAZORPAY MODAL (Using data from step 1)
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: razorpayAmount,
+        currency: razorpayCurrency,
+        name: "Your Store Name",
+        description: "Purchase Payment",
+        order_id: razorpayOrderId, // Use the ID returned by your backend
+        handler: async function (response) {
+          // 3. VERIFY PAYMENT
+          const verifyPayload = {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            orderId: internalOrderId,
+          };
+
+          try {
+            const verifyRes = await fetch(`${API_BASE}/api/razorpay/verify`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(verifyPayload),
+            });
+
+            if (!verifyRes.ok) {
+              throw new Error("Payment verification failed");
+            }
+
+            toast.success("Order placed successfully!");
+            clearCart();
+            localStorage.removeItem("cart");
+            router.push("/orders");
+          } catch (verifyErr) {
+            toast.error("Payment success but verification failed.");
+            console.error(verifyErr);
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone || "",
+        },
+        theme: {
+          color: "#172554",
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on("payment.failed", function (response) {
+        toast.error("Payment Failed: " + response.error.description);
+      });
+      paymentObject.open();
     } catch (err) {
-      toast.error("Failed to place order");
+      console.error("Checkout Error:", err);
+      toast.error(err.message || "Failed to place order");
     } finally {
       setPlacingOrder(false);
     }
@@ -233,7 +315,7 @@ export default function CheckoutPage() {
                 className="w-full mt-8 bg-[#172554] text-white py-5 rounded-xl text-xl font-semibold hover:bg-[#0f1e3d] disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 <CreditCard className="w-6 h-6" />
-                {placingOrder ? "Placing Order..." : "Place Order"}
+                {placingOrder ? "Processing..." : "Pay Now"}
               </button>
             </div>
           </div>
