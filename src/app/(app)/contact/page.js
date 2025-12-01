@@ -1,11 +1,12 @@
-// src/app/(app)/contact/page.js
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Minus, ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";                  
 import StayInspired from "@/components/home/StayInspired";
-import { Phone, Mail, Globe } from "lucide-react";
+import { Phone, Mail } from "lucide-react";
 
 // --- Countries Data ---
 const countries = [
@@ -66,13 +67,11 @@ const Collapsible = ({ open, onOpenChange, trigger, children }) => {
   );
 };
 
-// --- Country Code Picker ---
 const CountryCodePicker = ({ onSelect, selectedCountry, isPopoverOpen, setIsPopoverOpen, search, setSearch, filteredCountries }) => {
   return (
     <div className="relative">
-      {/* ← YE BUTTON AB SUBMIT NHI KAREGA */}
       <button
-        type="button"  // ← YE ADD KIYA
+        type="button"
         onClick={() => setIsPopoverOpen(!isPopoverOpen)}
         className="flex w-full items-center justify-between h-10 rounded-md border border-gray-300 bg-gray-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
       >
@@ -94,7 +93,7 @@ const CountryCodePicker = ({ onSelect, selectedCountry, isPopoverOpen, setIsPopo
               filteredCountries.map((country) => (
                 <button
                   key={country.code}
-                  type="button"  // ← YE BHI ADD KIYA (safe)
+                  type="button"
                   onClick={() => {
                     onSelect(country);
                     setIsPopoverOpen(false);
@@ -121,6 +120,9 @@ export default function ContactPage() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [search, setSearch] = useState("");
 
+  // ← API BASE
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
   const toggleDepartment = (dept) => {
     setOpenDepartment(openDepartment === dept ? null : dept);
   };
@@ -140,12 +142,56 @@ export default function ContactPage() {
     setSearch("");
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    const payload = {
+      title: "Contact Form Inquiry",
+      description: formData.get("message")?.trim() || "",
+      customerInfo: {
+        firstName: formData.get("firstName")?.trim() || "",
+        lastName: formData.get("lastName")?.trim() || "",
+        email: formData.get("email")?.trim() || "",
+        phone: phoneNumber.replace(/\s/g, ""),
+      },
+    };
+
+    if (!payload.customerInfo.firstName || !payload.customerInfo.email || !payload.description) {
+      toast.error("First Name, Email aur Message bharna zaroori hai!");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/support`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success("Thank you! Your message has been sent successfully. We'll get back to you soon.");
+        e.target.reset();
+        setPhoneNumber("+91 ");
+        setSelectedCountry(countries.find((c) => c.code === "IN"));
+      } else {
+        const err = await res.json();
+        toast.error(err.message || "Something went wrong. Please try again.");
+      }
+      } catch (err) {
+        toast.error("No internet connection. Please check your network and try again.");
+      }
+  };
+
   return (
     <div className="py-12 lg:py-16">
       {/* Hero Section */}
       <div className="w-full mx-auto px-4 lg:px-8 mb-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Images – ORIGINAL UNSPLASH */}
           <div className="lg:col-span-5 grid grid-cols-2 gap-4">
             <div className="aspect-[3/4] overflow-hidden rounded-lg shadow-md">
               <Image
@@ -167,171 +213,97 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Info */}
-         <div className="lg:col-span-7">
-      <h1
-        className="mb-12 text-5xl leading-tight  text-[#172554]"
-        style={{ fontFamily: "'Playfair Display', serif" }}
-      >
-        Questions, requests, or just a hello — feel free to reach out.
-      </h1>
+          <div className="lg:col-span-7">
+            <h1 className="mb-12 text-5xl leading-tight text-[#172554]" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Questions, requests, or just a hello — feel free to reach out.
+            </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-sm leading-loose">
-        
-        {/* Location */}
-        <div>
-          <h3 className="mb-2 text-xl font-medium">Corporate Office</h3>
-          <address className="not-italic text-gray-600 text-sm leading-relaxed max-w-xs mx-auto sm:max-w-none">
-            <span className="block sm:inline">207, Shyam Kunj, Shree Shyam Heights,</span>
-            <span className="block sm:inline">Sampat Hills, Bicholi Mardana,</span>
-            <span className="block sm:inline">Indore – 452016, India</span>
-          </address>
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-sm leading-loose">
+              <div>
+                <h3 className="mb-2 text-xl font-medium">Corporate Office</h3>
+                <address className="not-italic text-gray-600 text-sm leading-relaxed max-w-xs mx-auto sm:max-w-none">
+                  <span className="block sm:inline">207, Shyam Kunj, Shree Shyam Heights,</span>
+                  <span className="block sm:inline">Sampat Hills, Bicholi Mardana,</span>
+                  <span className="block sm:inline">Indore – 452016, India</span>
+                </address>
+              </div>
 
-        {/* Hours */}
-        <div>
-          <h3 className="mb-2 text-xl font-medium">Business Hours</h3>
-          <p className="text-gray-600">Monday – Saturday</p>
-          <p className="text-gray-600">10:00 AM – 6:00 PM IST</p>
-        </div>
+              <div>
+                <h3 className="mb-2 text-xl font-medium">Business Hours</h3>
+                <p className="text-gray-600">Monday – Saturday</p>
+                <p className="text-gray-600">10:00 AM – 6:00 PM IST</p>
+              </div>
 
-        {/* Contact – Phone + Email + Website */}
-          <div>
-          <h3 className="mb-2 text-xl font-medium">Contact</h3>
-          <div className="space-y-2 text-sm">
-
-            {/* Phone 1 */}
-            <p className="flex items-center gap-2 text-gray-600">
-              <Phone className="w-4 h-4 text-gray-500" />
-              <a href="tel:+919755040030" className="hover:text-black transition">
-                +91 97550 40030
-              </a>
-            </p>
-
-            {/* Phone 2 */}
-            <p className="flex items-center gap-2 text-gray-600">
-              <Phone className="w-4 h-4 text-gray-500" />
-              <a href="tel:+919644403330" className="hover:text-black transition">
-                +91 96444 03330
-              </a>
-            </p>
-
-            {/* Email */}
-            <p className="flex items-center gap-2 text-gray-600">
-              <Mail className="w-4 h-4 text-gray-500" />
-              <a href="mailto:tanaririllp@gmail.com" className="hover:text-black transition underline">
-                tanaririllp@gmail.com
-              </a>
-            </p>
-
-                  </div>
-                 </div>
-
+              <div>
+                <h3 className="mb-2 text-xl font-medium">Contact</h3>
+                <div className="space-y-2 text-sm">
+                  <p className="flex items-center gap-2 text-gray-600">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <a href="tel:+919755040030" className="hover:text-black transition">+91 97550 40030</a>
+                  </p>
+                  <p className="flex items-center gap-2 text-gray-600">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <a href="tel:+919644403330" className="hover:text-black transition">+91 96444 03330</a>
+                  </p>
+                  <p className="flex items-center gap-2 text-gray-600">
+                    <Mail className="w-4 h-4 text-gray-500" />
+                    <a href="mailto:tanaririllp@gmail.com" className="hover:text-black transition underline">tanaririllp@gmail.com</a>
+                  </p>
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
+        </div>
       </div>
 
       {/* Contact Form + Departments */}
       <div className="w-full mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          
           {/* Departments */}
-          <div className="bg-white p-6 lg:p-8 rounded-lg shadow-sm border border-gray-200 ">
+          <div className="bg-white p-6 lg:p-8 rounded-lg shadow-sm border border-gray-200">
             <h2 className="mb-10 text-4xl text-[#1E3A8A]" style={{ fontFamily: "'Playfair Display', serif" }}>
               Departments
             </h2>
             <div className="space-y-4">
-              <Collapsible
-                open={openDepartment === "general"}
-                onOpenChange={() => toggleDepartment("general")}
-                trigger="General Inquiries"
-              >
+              <Collapsible open={openDepartment === "general"} onOpenChange={() => toggleDepartment("general")} trigger="General Inquiries">
                 <p className="mb-3">Got a question about a product, need help with an order, or just want to reach out?</p>
-                <p>
-                  We're here to help. Reach us at{" "}
-                  <a href="mailto:info@tanariri.com" className="text-[#1E3A8A] hover:underline">
-                    info@tanariri.com
-                  </a>
-                </p>
+                <p>We're here to help. Reach us at <a href="mailto:info@tanariri.com" className="text-[#1E3A8A] hover:underline">info@tanariri.com</a></p>
               </Collapsible>
-
-              <Collapsible
-                open={openDepartment === "trade"}
-                onOpenChange={() => toggleDepartment("trade")}
-                trigger="Trade & Wholesale"
-              >
+              <Collapsible open={openDepartment === "trade"} onOpenChange={() => toggleDepartment("trade")} trigger="Trade & Wholesale">
                 <p className="mb-3">Interested in wholesale or trade partnerships? We'd love to hear from you.</p>
-                <p>
-                  Contact us at{" "}
-                  <a href="mailto:trade@tanariri.com" className="text-[#1E3A8A] hover:underline">
-                    trade@tanariri.com
-                  </a>
-                </p>
+                <p>Contact us at <a href="mailto:trade@tanariri.com" className="text-[#1E3A8A] hover:underline">trade@tanariri.com</a></p>
               </Collapsible>
-
-              <Collapsible
-                open={openDepartment === "press"}
-                onOpenChange={() => toggleDepartment("press")}
-                trigger="Press & Media"
-              >
+              <Collapsible open={openDepartment === "press"} onOpenChange={() => toggleDepartment("press")} trigger="Press & Media">
                 <p className="mb-3">For press inquiries, interviews, or media assets, please reach out to our press team.</p>
-                <p>
-                  Email us at{" "}
-                  <a href="mailto:press@tanariri.com" className="text-[#1E3A8A] hover:underline">
-                    press@tanariri.com
-                  </a>
-                </p>
+                <p>Email us at <a href="mailto:press@tanariri.com" className="text-[#1E3A8A] hover:underline">press@tanariri.com</a></p>
               </Collapsible>
-
-              <Collapsible
-                open={openDepartment === "showrooms"}
-                onOpenChange={() => toggleDepartment("showrooms")}
-                trigger="Showrooms"
-              >
+              <Collapsible open={openDepartment === "showrooms"} onOpenChange={() => toggleDepartment("showrooms")} trigger="Showrooms">
                 <p className="mb-3">Visit our showrooms to experience our collections in person. Book an appointment today.</p>
-                <p>
-                  Contact{" "}
-                  <a href="mailto:showroom@tanariri.com" className="text-[#1E3A8A] hover:underline">
-                    showroom@tanariri.com
-                  </a>
-                </p>
+                <p>Contact <a href="mailto:showroom@tanariri.com" className="text-[#1E3A8A] hover:underline">showroom@tanariri.com</a></p>
               </Collapsible>
             </div>
           </div>
 
-          {/* Contact Form */}
+          {/* Contact Form - NOW FULLY WORKING */}
           <div className="bg-white p-4 lg:p-6 rounded-lg shadow-sm border border-gray-200">
             <h2 className="mb-6 text-3xl text-[#1E3A8A]" style={{ fontFamily: "'Playfair Display', serif" }}>
               Let's hear from you
             </h2>
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">First Name</label>
-                  <input
-                    type="text"
-                    placeholder="Your Name"
-                    className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
-                  />
+                  <input name="firstName" required type="text" placeholder="Your Name" className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    placeholder="Your Last Name"
-                    className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
-                  />
+                  <input name="lastName" type="text" placeholder="Your Last Name" className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  placeholder="youremail@example.com"
-                  className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
-                />
+                <input name="email" required type="email" placeholder="youremail@example.com" className="w-full h-10 px-4 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black" />
               </div>
 
               <div>
@@ -361,6 +333,8 @@ export default function ContactPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Message</label>
                 <textarea
+                  name="message"
+                  required
                   rows={2}
                   placeholder="Tell us about your requirements..."
                   className="w-full p-2 border border-gray-300 rounded-md bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black resize-none"
@@ -368,7 +342,7 @@ export default function ContactPage() {
               </div>
 
               <div className="flex items-start gap-3">
-                <input type="checkbox" id="privacy" className="mt-1 h-4 w-4" />
+                <input type="checkbox" id="privacy" required className="mt-1 h-4 w-4" />
                 <label htmlFor="privacy" className="text-xs text-gray-600 cursor-pointer">
                   I agree to the Privacy Policy and consent to be contacted by TanaRiri regarding my inquiry. *
                 </label>
@@ -385,12 +359,10 @@ export default function ContactPage() {
         </div>
       </div>
 
-      {/* Divider + Newsletter */}
       <div className="max-w-7xl mx-auto px-4 lg:px-8 mt-16">
         <div className="h-px bg-gray-200"></div>
       </div>
 
-      {/* Stay Inspired */}
       <StayInspired />
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8">

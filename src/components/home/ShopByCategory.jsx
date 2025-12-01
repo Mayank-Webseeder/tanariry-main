@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 function LargeCategoryCard({ title, desc, image, onClick }) {
   return (
     <div
-      onClick={onClick}
-      className="group relative overflow-hidden aspect-[4/5] rounded-2xl cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-500"
+      // onClick={onClick}
+      className="group relative overflow-hidden aspect-[4/5] rounded-2xl  shadow-lg hover:shadow-2xl transition-all duration-500"
     >
       {/* Image */}
       <Image

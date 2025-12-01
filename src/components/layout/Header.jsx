@@ -117,7 +117,7 @@ export default function Header() {
               </div>
 
               {/* 6-Column Mega Dropdown */}
-              <div
+              {/* <div
                 className="absolute top-full w-[1450px] ml-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 pointer-events-none group-hover:pointer-events-auto"
                 style={{
                   left: '50%',
@@ -128,7 +128,6 @@ export default function Header() {
                   <div className="p-8">
                     <div className="grid grid-cols-6 gap-8 text-sm">
 
-                      {/* Column 1: Living Room */}
                       <div>
                         <h4 className="font-semibold text-pink-500 mb-4 text-base">Living Room</h4>
                         <ul className="space-y-3 text-gray-600">
@@ -139,7 +138,6 @@ export default function Header() {
                         </ul>
                       </div>
 
-                      {/* Column 2: Bedroom */}
                       <div>
                         <h4 className="font-semibold text-pink-500 mb-4 text-base">Bedroom</h4>
                         <ul className="space-y-3 text-gray-600">
@@ -149,7 +147,7 @@ export default function Header() {
                         </ul>
                       </div>
 
-                      {/* Column 3: Dining Room */}
+                 
                       <div>
                         <h4 className="font-semibold text-pink-500 mb-4 text-base">Dining Room</h4>
                         <ul className="space-y-3 text-gray-600">
@@ -158,7 +156,6 @@ export default function Header() {
                         </ul>
                       </div>
 
-                      {/* Column 4: Home Decor */}
                       <div>
                         <h4 className="font-semibold text-pink-500 mb-4 text-base">Home Decor</h4>
                         <ul className="space-y-3 text-gray-600">
@@ -167,7 +164,6 @@ export default function Header() {
                         </ul>
                       </div>
 
-                      {/* Column 5: Just In */}
                       <div className="flex flex-col items-center">
                         <Link href="/products" className="group/item block w-full">
                           <div className="overflow-hidden rounded-lg shadow-sm w-full">
@@ -181,7 +177,6 @@ export default function Header() {
                         </Link>
                       </div>
 
-                      {/* Column 6: Outlet */}
                       <div className="flex flex-col items-center">
                         <Link href="/products" className="group/item block w-full">
                           <div className="overflow-hidden rounded-lg shadow-sm w-full">
@@ -198,7 +193,7 @@ export default function Header() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <Link href="/about" className={`${navLinkClass('/about')} ${underlineStyle('/about')}`}>
