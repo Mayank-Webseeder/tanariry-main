@@ -366,13 +366,12 @@
 // }
 "use client";
 
-import { useState,useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
-import { Package, Truck, ArrowLeft, CreditCard } from "lucide-react";
+import { Package, Truck, CreditCard, CheckCircle } from "lucide-react";
 import StayInspired from "@/components/home/StayInspired";
 
 const loadRazorpayScript = () => {
@@ -390,7 +389,7 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const router = useRouter();
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("online"); // 'online' or 'cod'
+  const [paymentMethod, setPaymentMethod] = useState("online");
 
   const [formData, setFormData] = useState({
     shippingAddress: "",
@@ -408,22 +407,20 @@ export default function CheckoutPage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-    useEffect(() => {
-  if (authLoading) return; 
-  if (!user) {
-    toast.error("Please login to checkout");
-    router.push("/auth/login");
-    return;
-  }
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      toast.error("Please login to checkout");
+      router.push("/auth/login");
+      return;
+    }
+    if (cart.length === 0) {
+      toast.error("Your cart is empty");
+      router.push("/cart");
+      return;
+    }
+  }, [authLoading, user, cart, router]);
 
-  if (cart.length === 0) {
-    toast.error("Your cart is empty");
-    router.push("/cart");
-    return;
-  }
-}, [authLoading, user, cart, router]);
-
-  // Handle both COD and Online Payment
   const handlePlaceOrder = async () => {
     if (!formData.shippingAddress) {
       toast.error("Please select a shipping address");
@@ -455,65 +452,60 @@ export default function CheckoutPage() {
         return;
       }
 
-        let payload = {
-          items: cart.map((item) => {
-            const priceInPaise = Math.round(getPrice(item) * 100); 
-            const quantity = Number(item.quantity) || 1;
+      let payload = {
+        items: cart.map((item) => {
+          const priceInPaise = Math.round(getPrice(item) * 100);
+          const quantity = Number(item.quantity) || 1;
 
-            return {
-              productId: item._id || item.id,
-              name: item.productName || item.name || "Product",
-              price: priceInPaise,
-              quantity: quantity,
-              subtotal: priceInPaise * quantity,
-            };
-          }),
-          totalAmount: Math.round(total * 100), 
-          shippingAddress: {
-            address: shippingAddr.address,
-            city: shippingAddr.city,
-            state: shippingAddr.state,
-            pincode: shippingAddr.pincode,
-            country: shippingAddr.country || "India",
+          return {
+            productId: item._id || item.id,
+            name: item.productName || item.name || "Product",
+            price: priceInPaise,
+            quantity: quantity,
+            subtotal: priceInPaise * quantity,
+          };
+        }),
+        totalAmount: Math.round(total * 100),
+        shippingAddress: {
+          address: shippingAddr.address,
+          city: shippingAddr.city,
+          state: shippingAddr.state,
+          pincode: shippingAddr.pincode,
+          country: shippingAddr.country || "India",
+        },
+      };
+
+      if (paymentMethod === "online") {
+        payload.paymentMethod = "online";
+      }
+
+      // COD Flow
+      if (paymentMethod === "cod") {
+        const res = await fetch(`${API_BASE}/api/orders/createOrderByCustomer`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-        };
+          body: JSON.stringify(payload),
+        });
 
-        if (paymentMethod === "online") {
-          payload.paymentMethod = "online";
+        if (!res.ok) {
+          const err = await res.json();
+          toast.error(err.message || "COD order failed");
+          return;
         }
 
+        toast.success("Order placed! Pay on delivery");
+        clearCart();
+        localStorage.removeItem("cart");
+        sessionStorage.setItem("justPlacedOrder", "true");
+        sessionStorage.setItem("showOrderSuccess", "true");
+        window.location.href = "/orders";  
+        return;
+      }
 
-    if (paymentMethod === "cod") {
-  try {
-    const res = await fetch(`${API_BASE}/api/orders/createOrderByCustomer`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      console.error("COD Error:", err);
-      toast.error(err.message || "COD order failed");
-      return;
-    }
-
-    toast.success("Order placed! Pay on delivery");
-    clearCart();
-    localStorage.removeItem("cart");
-    router.push("/orders");
-    return;
-
-  } catch (err) {
-    toast.error("Network error");
-    return;
-  }
-  
-}
-
+      // Online Payment Flow
       const isScriptLoaded = await loadRazorpayScript();
       if (!isScriptLoaded) {
         toast.error("Failed to load payment gateway");
@@ -566,7 +558,8 @@ export default function CheckoutPage() {
             toast.success("Payment successful! Order placed");
             clearCart();
             localStorage.removeItem("cart");
-            router.push("/orders");
+            sessionStorage.setItem("justPlacedOrder", "true");
+            window.location.href = "/orders";
           } else {
             toast.error("Payment failed. Please try again.");
           }
@@ -593,141 +586,135 @@ export default function CheckoutPage() {
   };
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  
 
   return (
-    <div className=" bg-gray-50">
-      <div className=" mx-auto px-8 py-12">
+    <>
+      <div className="bg-gray-50">
+        <div className="mx-auto px-8 py-12">
 
-        {/* Back & Title */}
-        {/* <Link href="/cart" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium mb-4">
-          <ArrowLeft className="w-4 h-4" /> Back to Cart
-        </Link> */}
-        <div className="relative inline-block pb-3 mb-6">
+          <div className="relative inline-block pb-3 mb-6">
             <h1 className="text-5xl text-[#172554]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}>
-             Checkout
+              Checkout
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
               <div className="absolute inset-0 bg-pink-500 animate-shimmer"></div>
             </div>
           </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* Left: Address + Payment Method */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Shipping Address */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <Truck className="w-6 h-6 text-gray-700" />
-                <h2 className="text-xl font-semibold">Shipping Address</h2>
+            <div className="lg:col-span-2 space-y-6">
+              {/* Shipping Address */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <Truck className="w-6 h-6 text-gray-700" />
+                  <h2 className="text-xl font-semibold">Shipping Address</h2>
+                </div>
+                <select
+                  value={formData.shippingAddress}
+                  onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#172554] focus:border-[#172554] outline-none"
+                  required
+                >
+                  <option value="">Select address</option>
+                  {user.addresses?.map((addr, i) => {
+                    const str = `${addr.address}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+                    return <option key={i} value={str}>{str}</option>;
+                  })}
+                </select>
               </div>
-              <select
-                value={formData.shippingAddress}
-                onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#172554] focus:border-[#172554] outline-none"
-                required
-              >
-                <option value="">Select address</option>
-                {user.addresses?.map((addr, i) => {
-                  const str = `${addr.address}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
-                  return <option key={i} value={str}>{str}</option>;
-                })}
-              </select>
+
+              {/* Payment Method */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold mb-5">Payment Method</h2>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="online"
+                      checked={paymentMethod === "online"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-5 h-5 text-[#172554]"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Online Payment</div>
+                      <div className="text-sm text-gray-600">Credit/Debit Card, UPI, Netbanking</div>
+                    </div>
+                    <CreditCard className="w-6 h-6 text-gray-500" />
+                  </label>
+
+                  <label className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="cod"
+                      checked={paymentMethod === "cod"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-5 h-5 text-[#172554]"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Cash on Delivery (COD)</div>
+                      <div className="text-sm text-gray-600">Pay when you receive</div>
+                    </div>
+                    <Package className="w-6 h-6 text-gray-500" />
+                  </label>
+                </div>
+              </div>
             </div>
 
-            {/* Payment Method */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold mb-5">Payment Method</h2>
-              <div className="space-y-3">
-                <label className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="online"
-                    checked={paymentMethod === "online"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-[#172554]"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">Online Payment</div>
-                    <div className="text-sm text-gray-600">Credit/Debit Card, UPI, Netbanking</div>
-                  </div>
-                  <CreditCard className="w-6 h-6 text-gray-500" />
-                </label>
+            {/* Right side - Order Summary */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
+                <h2 className="text-xl font-semibold mb-5 pb-4 border-b">Order Summary</h2>
 
-                <label className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-[#172554]"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">Cash on Delivery (COD)</div>
-                    <div className="text-sm text-gray-600">Pay when you receive</div>
-                  </div>
-                  <Package className="w-6 h-6 text-gray-500" />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
-              <h2 className="text-xl font-semibold mb-5 pb-4 border-b">Order Summary</h2>
-
-              <div className="space-y-4 text-sm mb-6">
-                {cart.map((item) => (
-                  <div key={item._id} className="flex justify-between">
-                    <span className="text-gray-600">{item.productName || item.name} × {item.quantity}</span>
-                    <span className="font-medium">₹{(getPrice(item) * item.quantity).toLocaleString("en-IN")}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t pt-4 space-y-5">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toLocaleString("en-IN")}</span>
+                <div className="space-y-4 text-sm mb-6">
+                  {cart.map((item) => (
+                    <div key={item._id} className="flex justify-between">
+                      <span className="text-gray-600">{item.productName || item.name} × {item.quantity}</span>
+                      <span className="font-medium">₹{(getPrice(item) * item.quantity).toLocaleString("en-IN")}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>GST (5%)</span>
-                  <span>₹{tax.toLocaleString("en-IN")}</span>
+
+                <div className="border-t pt-4 space-y-5">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>GST (5%)</span>
+                    <span>₹{tax.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t">
+                    <span>Total</span>
+                    <span>₹{total.toLocaleString("en-IN")}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t">
-                  <span>Total</span>
-                  <span>₹{total.toLocaleString("en-IN")}</span>
-                </div>
+
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={placingOrder || !formData.shippingAddress}
+                  className="w-full mt-6 bg-[#172554] hover:bg-[#0f1e3d] text-white font-semibold py-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {placingOrder
+                    ? "Processing..."
+                    : paymentMethod === "cod"
+                    ? "Place Order (COD)"
+                    : `Pay ₹${total.toLocaleString("en-IN")}`}
+                </button>
+
+                <p className="text-center text-xs text-gray-500 mt-4">
+                  Secured by SSL • Trusted by thousands
+                </p>
               </div>
-
-              <button
-                onClick={handlePlaceOrder}
-                disabled={placingOrder || !formData.shippingAddress}
-                className="w-full mt-6 bg-[#172554] hover:bg-[#0f1e3d] text-white font-semibold py-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {placingOrder
-                  ? "Processing..."
-                  : paymentMethod === "cod"
-                  ? "Place Order (COD)"
-                  : `Pay ₹${total.toLocaleString("en-IN")}`}
-              </button>
-
-              <p className="text-center text-xs text-gray-500 mt-4">
-                Secured by SSL • Trusted by thousands
-              </p>
             </div>
           </div>
         </div>
+        <div>
+          <StayInspired />
+        </div>
       </div>
-      <div>
-        <StayInspired />
-      </div>
-     </div>
-    
+    </>
   );
 }

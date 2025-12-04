@@ -5,6 +5,7 @@ import Link from "next/link";
 import StayInspired from "@/components/home/StayInspired";
 import toast from "react-hot-toast";
 import { useAuth } from '@/context/AuthContext';
+import { CheckCircle } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const IMG_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL
@@ -20,6 +21,17 @@ export default function OrdersPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
+  useEffect(() => {
+    const justPlaced = sessionStorage.getItem("justPlacedOrder");
+    if (justPlaced) {
+      sessionStorage.removeItem("justPlacedOrder");
+      setShowSuccessPopup(true);
+      const timer = setTimeout(() => setShowSuccessPopup(false), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const statusSteps = [
     { status: "Pending", label: "Order Placed" },
@@ -229,7 +241,7 @@ export default function OrdersPage() {
               My Orders
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
-              <div className="absolute inset-0 bg-pink-500 animate-shimmer"></div>
+              <div className="absolute inset-0 bg-pink-300 animate-shimmer"></div>
             </div>
           </div>
 
@@ -359,7 +371,7 @@ export default function OrdersPage() {
               <h4 className="font-semibold text-lg mb-4 text-[#172554]">Products</h4>
 
               {(() => {
-                // Try multiple possible field names used by backends
+    
                 const items =
                   selectedOrder?.items ||
                   selectedOrder?.orderItems ||
@@ -572,6 +584,41 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      {showSuccessPopup && (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
+ 
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+            onClick={() => setShowSuccessPopup(false)}
+          />
+
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-12 text-center 
+                          animate-in fade-in zoom-in duration-500 
+                          border border-white/20">
+            
+            <div className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-green-600 
+                            rounded-full mx-auto mb-8 flex items-center justify-center 
+                            shadow-2xl animate-pulse ring-8 ring-white/30">
+              <CheckCircle className="w-16 h-16 text-white" />
+            </div>
+
+            <h2 className="text-5xl font-bold text-gray-900 mb-4">Order Confirmed!</h2>
+            <p className="text-xl text-gray-700 mb-10 leading-relaxed">
+              Thank you for shopping with Tanariry!
+            </p>
+
+            <button
+              onClick={() => setShowSuccessPopup(false)}
+              className="mx-auto bg-[#172554] hover:bg-[#0f1e3d] text-white font-bold 
+                          text-xl py-3 px-8 rounded-2xl transition-all duration-300 
+                          transform hover:scale-105 shadow-xl hover:shadow-2xl"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+)}
 
       <StayInspired />
     </>

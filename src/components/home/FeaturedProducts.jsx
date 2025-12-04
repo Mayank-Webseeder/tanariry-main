@@ -67,13 +67,13 @@ export default function FeaturedProducts() {
             >
               Explore Products
             </h2>
-            <div className="absolute left-0 bottom-0 h-1 bg-pink-500 rounded-full w-full"></div>
+            <div className="absolute left-0 bottom-0 h-1 bg-pink-300 rounded-full w-full"></div>
           </div>
 
           {/* View All Button - Always Visible */}
           <Link
             href="/products"
-            className="px-3 py-1.5 border border-pink-500 text-pink-500 rounded-md hover:bg-white hover:text-[#1E3A8A] transition-all duration-300 text-sm md:text-[15px] font-medium whitespace-nowrap self-start sm:self-center"
+            className="px-3 py-1.5 border border-pink-500 text-[#1E3A8A] rounded-md hover:bg-white transition-all duration-300 text-sm md:text-[15px] font-medium whitespace-nowrap self-start sm:self-center"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             View All

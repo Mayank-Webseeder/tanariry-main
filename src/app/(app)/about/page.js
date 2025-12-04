@@ -61,7 +61,7 @@ export default function AboutPage() {
                   <h1 className="text-6xl lg:text-7xl font-normal pb-4 text-[#172554]" style={{ fontFamily: "'Playfair Display', serif" }}>
                     Our Story
                   </h1>
-                   <div className="absolute left-0 bottom-0 h-1 bg-pink-500 rounded-full w-full"></div>
+                   <div className="absolute left-0 bottom-0 h-1 bg-pink-300 rounded-full w-full"></div>
                 </div>
                 <div className="space-y-8 text-gray-700 leading-relaxed">
                   <p>

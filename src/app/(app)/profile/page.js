@@ -179,7 +179,7 @@ export default function ProfilePage() {
               My Profile
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
-              <div className="absolute inset-0 bg-pink-500 animate-shimmer"></div>
+              <div className="absolute inset-0 bg-pink-300 animate-shimmer"></div>
             </div>
           </div>
 

@@ -17,7 +17,6 @@ import toast from "react-hot-toast";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// 1. Image Helper Logic
 const getImageUrl = (path) => {
   if (!path) return "/fallback.jpg";
   if (path.startsWith("http")) return path;
@@ -25,7 +24,7 @@ const getImageUrl = (path) => {
   return `${BACKEND_URL}/uploads/${path}`;
 };
 
-// 2. Cart Item Sub-component for Safe Image Handling
+
 const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
   const rawImage = item.productImages?.[0] || item.image;
   const [imgSrc, setImgSrc] = useState(getImageUrl(rawImage));
@@ -34,7 +33,6 @@ const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
   const qty = item.quantity || 1;
   const price = getPrice(item);
 
-  // Sync image if item changes
   useEffect(() => {
     setImgSrc(getImageUrl(rawImage));
   }, [rawImage]);
@@ -121,6 +119,15 @@ export default function CartPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  useEffect(() => {
+    if (cart.length === 0) {
+      const justOrdered = sessionStorage.getItem("justPlacedOrder");
+      if (justOrdered) {
+        sessionStorage.removeItem("justPlacedOrder");
+        window.location.href = "/orders";
+      }
+    }
+  }, [cart]);
 
   const getPrice = (item) => Number(item.discountPrice || item.price || 0);
 
