@@ -208,7 +208,7 @@ export default function AboutPage() {
               <Avatar src="/erik_johannsen.webp" alt="Rajesh Patel" fallback="PS" />
               <div className="mt-6">
                 <h3 className="text-4xl mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  Mr. Rajesh Patel
+                  Mr. Ravi Mehta
                 </h3>
                 <p className="text-gray-600 text-lg mb-3">Founder & CEO</p>
                 <p className="text-gray-700 text-md leading-snug">
@@ -225,7 +225,7 @@ export default function AboutPage() {
               
               <div className="mt-6">
                 <h3 className="text-4xl mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  Ms. Priya Sharma
+                  Ms. Jyoti Mehta
                 </h3>
                 <p className="text-gray-600 text-lg mb-3">Head of Design & Sourcing</p>
                 <p className="text-gray-700 text-md leading-snug">
@@ -309,7 +309,7 @@ export default function AboutPage() {
            “To be a global ambassador of Indian heritage, delivering products that harmonize tradition with modern luxury—across homes, wardrobes, and lifestyles worldwide.”
           </p>
           <footer className="mt-6 text-lg text-gray-700">
-            Mr. Rajesh Patel
+            Mr. Ravi Mehta<br />
             <div className="text-sm text-gray-600">Founder & CEO, Tanariri Overseas LLP</div>
           </footer>
         </blockquote>
