@@ -121,7 +121,7 @@ export default function CartSidebar({ isOpen, onClose }) {
     <>
       {/* Smooth Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-all duration-500 ease-out ${
+        className={`fixed inset-0 bg-black/50  z-40 transition-all duration-500 ease-out ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
         onClick={onClose}

@@ -126,7 +126,7 @@ const handleSubmit = async (e) => {
     >
       <div className="absolute inset-0 bg-black/50"></div>
 
-      <div className="relative z-10 w-full max-w-2xl bg-[#f5f3f0] backdrop-blur-md p-8 rounded-lg shadow-xl border border-gray-200">
+      <div className="relative z-10 w-full max-w-lg bg-[#f5f3f0] backdrop-blur-md p-8 rounded-lg shadow-xl border border-gray-200">
         <button
           onClick={() => router.push("/")}
           className="absolute top-2 left-4 flex items-center gap-2 text-gray-700 hover:text-gray-900 transition"
