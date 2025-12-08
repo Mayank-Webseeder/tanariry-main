@@ -1,4 +1,4 @@
-// components/products/FilterSidebar.jsx
+
 import { X, LayoutGrid, Grid3x3 } from "lucide-react";
 
 export default function FilterSidebar({
@@ -18,7 +18,7 @@ export default function FilterSidebar({
   setViewMode,
   onApplyFilters,
 }) {
-  // Reset all filters
+ 
   const handleReset = () => {
     setSelectedCategory("all");
     setActiveCat(null);
@@ -32,7 +32,7 @@ export default function FilterSidebar({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
         onClick={onClose}

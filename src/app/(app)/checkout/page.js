@@ -407,19 +407,27 @@ export default function CheckoutPage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      toast.error("Please login to checkout");
-      router.push("/auth/login");
-      return;
-    }
-    if (cart.length === 0) {
-      toast.error("Your cart is empty");
-      router.push("/cart");
-      return;
-    }
-  }, [authLoading, user, cart, router]);
+ useEffect(() => {
+  if (authLoading) return;
+
+  if (!user) {
+    toast.error("Please login to checkout");
+    router.push("/auth/login");
+    return;
+  }
+
+  if (cart.length === 0) {
+    toast.error("Your cart is empty");
+    router.push("/cart");
+    return;
+  }
+
+  if (!user.addresses || user.addresses.length === 0) {
+    toast.error("Please add a shipping address first");
+    router.push("/profile?tab=addresses");
+    return;
+  }
+}, [authLoading, user, cart, router]);
 
   const handlePlaceOrder = async () => {
     if (!formData.shippingAddress) {
@@ -610,18 +618,36 @@ export default function CheckoutPage() {
                   <Truck className="w-6 h-6 text-gray-700" />
                   <h2 className="text-xl font-semibold">Shipping Address</h2>
                 </div>
-                <select
-                  value={formData.shippingAddress}
-                  onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#172554] focus:border-[#172554] outline-none"
-                  required
-                >
-                  <option value="">Select address</option>
-                  {user.addresses?.map((addr, i) => {
-                    const str = `${addr.address}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
-                    return <option key={i} value={str}>{str}</option>;
-                  })}
-                </select>
+
+                {/* Agar user ya addresses nahi hain (extra safety) */}
+                {!user || !user.addresses || user.addresses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-red-600 mb-4">No shipping address found</p>
+                    <button
+                      onClick={() => router.push("/profile?tab=addresses")}
+                      className="text-[#172554] underline font-medium hover:text-[#0f1e3d]"
+                    >
+                      → Add Address First
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.shippingAddress}
+                    onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#172554] focus:border-[#172554] outline-none"
+                    required
+                  >
+                    <option value="">Select address</option>
+                    {user.addresses.map((addr, i) => {
+                      const str = `${addr.address}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+                      return (
+                        <option key={i} value={str}>
+                          {str}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
               </div>
 
               {/* Payment Method */}

@@ -310,7 +310,7 @@ export default function AboutPage() {
           </p>
           <footer className="mt-6 text-lg text-gray-700">
             Mr. Ravi Mehta<br />
-            <div className="text-sm text-gray-600">Founder & CEO, Tanariri Overseas LLP</div>
+            <div className="text-sm text-gray-600">Founder & CEO, Tanariri</div>
           </footer>
         </blockquote>
       </section>

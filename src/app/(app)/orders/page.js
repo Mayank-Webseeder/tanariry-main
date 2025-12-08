@@ -23,6 +23,60 @@ export default function OrdersPage() {
   const [review, setReview] = useState("");
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
+  const [showReturn, setShowReturn] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnImages, setReturnImages] = useState([]);
+
+  // Return Order Request
+const requestReturn = async () => {
+  if (!returnReason) return toast.error("Please write a reason");
+  if (returnImages.length === 0) return toast.error("Please upload at least one image");
+
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
+
+  formData.append("reason", returnReason);
+  formData.append("reasonCategory", "damaged"); // या dynamic कर सकते हो
+
+  returnImages.forEach((image) => {
+    formData.append("images", image);
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/return-request`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (res.ok) {
+      toast.success("Return request submitted successfully!");
+      setShowReturn(false);
+      setReturnReason("");
+      setReturnImages([]);
+      
+      setSelectedOrder({ ...selectedOrder, returnRequested: true });
+    } else {
+      const error = await res.json();
+      toast.error(error.message || "Failed to submit return request");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Network error");
+  }
+};
+
+  const getNormalizedStatus = (order) => {
+  return (
+    order?.orderStatus ||
+    order?.status ||
+    order?.paymentStatus ||
+    "Pending"
+  ).toLowerCase();
+};
+
   useEffect(() => {
     const justPlaced = sessionStorage.getItem("justPlacedOrder");
     if (justPlaced) {
@@ -33,12 +87,12 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const statusSteps = [
-    { status: "Pending", label: "Order Placed" },
-    { status: "Processing", label: "Preparing" },
-    { status: "Shipped", label: "On the Way" },
-    { status: "Delivered", label: "Delivered" },
-  ];
+const statusSteps = [
+  { status: "pending",    label: "Order Placed" },
+  { status: "processing", label: "Preparing" },
+  { status: "shipped",    label: "On the Way" },
+  { status: "delivered",  label: "Delivered" },
+];
 
   // Fetch all orders for the logged-in user
   const fetchOrders = async () => {
@@ -172,7 +226,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Copy invoice number to clipboard
   const copyInvoiceNo = () => {
     const invoiceNo =
       selectedOrder?.invoiceDetails?.[0]?.invoiceNo ||
@@ -184,10 +237,10 @@ export default function OrdersPage() {
     toast.success("Invoice number copied!");
   };
 
-  // Find current status index for tracking bar
-  const currentIndex = selectedOrder?.orderStatus
-    ? statusSteps.findIndex((s) => s.status === selectedOrder.orderStatus)
-    : -1;
+
+const currentIndex = statusSteps.findIndex(
+  (step) => step.status === getNormalizedStatus(selectedOrder)
+);
 
   // Skeleton loader
   const SkeletonRow = () => (
@@ -241,7 +294,7 @@ export default function OrdersPage() {
               My Orders
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
-              <div className="absolute inset-0 bg-pink-300 animate-shimmer"></div>
+              <div className="absolute inset-0 bg-pink-500 animate-shimmer"></div>
             </div>
           </div>
 
@@ -276,17 +329,23 @@ export default function OrdersPage() {
                         <div>
                           <span className="text-gray-600">Status: </span>
                           <span
-                            className={`inline-block px-2 py-1 text-xs font-medium rounded-full border-2 ${
-                              order.orderStatus === "Delivered"
-                                ? "border-green-600 text-green-600"
-                                : order.orderStatus === "Cancelled"
-                                ? "border-red-600 text-red-600"
-                                : order.orderStatus === "Shipped"
-                                ? "border-blue-600 text-blue-600"
-                                : "border-[#172554] text-[#172554]"
+                            className={`inline-block px-3 py-1.5 text-xs font-semibold rounded-full border-2 transition-all ${
+                              getNormalizedStatus(order) === "delivered"
+                                ? "border-green-600 text-green-600 bg-green-50"
+                                : getNormalizedStatus(order) === "cancelled"
+                                ? "border-red-600 text-red-600 bg-red-50"
+                                : getNormalizedStatus(order) === "shipped"
+                                ? "border-blue-600 text-blue-600 bg-blue-50"
+                                : getNormalizedStatus(order) === "processing"
+                                ? "border-purple-600 text-purple-600 bg-purple-50"
+                                : "border-[#172554] text-[#172554] bg-[#172554]/5" 
                             }`}
                           >
-                            {order.orderStatus || "Pending"}
+                            {getNormalizedStatus(order) === "delivered" ? "Delivered" :
+                            getNormalizedStatus(order) === "cancelled" ? "Cancelled" :
+                            getNormalizedStatus(order) === "shipped" ? "Shipped" :
+                            getNormalizedStatus(order) === "processing" ? "Processing" :
+                            "Order Placed"}
                           </span>
                         </div>
                       </div>
@@ -324,7 +383,7 @@ export default function OrdersPage() {
       {/* Order Details Modal */}
       {isModalOpen && selectedOrder && (
         <div
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/40  flex items-center justify-center p-4 z-50"
           onClick={closeModal}
         >
           <div
@@ -491,8 +550,8 @@ export default function OrdersPage() {
             </div>
 
             {/* Cancel Order Option */}
-            {selectedOrder.orderStatus === "Pending" && (
-              <div className="mb-6 p-5 border border-red-200 rounded-xl bg-red-50">
+            {getNormalizedStatus(selectedOrder) === "pending" && (
+              <div className="mb-6 p-4 border border-red-200 rounded-xl bg-white hover:bg-red-50">
                 <button
                   onClick={() => setShowCancel(!showCancel)}
                   className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
@@ -508,7 +567,7 @@ export default function OrdersPage() {
                     <select
                       value={cancelReason}
                       onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full p-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500"
                     >
                       <option value="">Select Reason</option>
                       <option>Changed my mind</option>
@@ -519,13 +578,13 @@ export default function OrdersPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={cancelOrder}
-                        className="flex-1 bg-white border border-red-500 text-red-500 py-2.5 rounded-lg hover:bg-red-50 font-medium"
+                        className="flex-1 bg-white border border-red-600 text-red-500 py-2 rounded-lg hover:bg-red-50 font-medium"
                       >
                         Confirm Cancel
                       </button>
                       <button
                         onClick={() => setShowCancel(false)}
-                        className="px-6 py-2.5 border rounded-lg hover:bg-gray-50"
+                        className="px-6 py-2 border rounded-lg hover:bg-white"
                       >
                         Back
                       </button>
@@ -535,51 +594,139 @@ export default function OrdersPage() {
               </div>
             )}
 
-            {/* Review Section */}
-            {selectedOrder.orderStatus === "Delivered" && (
-              <div className="mb-6 p-5 border border-gray-200 rounded-lg bg-gray-50">
-                <h4 className="font-medium mb-3 text-[#172554]">Rate Your Experience</h4>
-                <div className="flex gap-2 mb-3">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setRating(star)}
-                      className={`text-2xl transition-colors ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
+            {/* Return Order Form */}
+            {showReturn && (
+              <div className="mb-6 p-5 border-2 border-orange-300 rounded-xl bg-orange-50">
+                <h4 className="font-semibold text-lg mb-4 text-orange-800">Request Return</h4>
+                
                 <textarea
-                  value={review}
-                  onChange={(e) => setReview(e.target.value)}
-                  placeholder="Share your experience..."
-                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#172554]"
-                  rows="3"
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  placeholder="Please explain the issue (e.g., received damaged item, wrong product, etc.)"
+                  className="w-full p-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                  rows="4"
                 />
-                <button
-                  onClick={submitReview}
-                  className="w-full mt-3 bg-[#172554] text-white py-2.5 rounded-lg hover:bg-[#1e3a8a] font-medium transition"
-                >
-                  Submit Review
-                </button>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Images (max 3)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setReturnImages(Array.from(e.target.files))}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">{returnImages.length} image(s) selected</p>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={requestReturn}
+                    className="flex-1 bg-orange-600 text-white py-2.5 rounded-lg hover:bg-orange-700 font-medium"
+                  >
+                    Submit Return Request
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowReturn(false);
+                      setReturnReason("");
+                      setReturnImages([]);
+                    }}
+                    className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Review Section */}
+            {/* {getNormalizedStatus(selectedOrder) === "delivered" && (
+                <div className="mb-6 p-5 border border-gray-200 rounded-lg bg-gray-50">
+                  <h4 className="font-medium mb-3 text-[#172554]">Rate Your Experience</h4>
+                  <div className="flex gap-2 mb-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRating(star)}
+                        className={`text-3xl transition-all hover:scale-110 ${
+                          star <= rating ? "text-yellow-500" : "text-gray-300"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={review}
+                    onChange={(e) => setReview(e.target.value)}
+                    placeholder="Share your experience... (optional)"
+                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#172554]"
+                    rows="3"
+                  />
+                  <button
+                    onClick={() => toast.success("Review feature coming soon!")}
+                    className="w-full mt-3 bg-[#172554] text-white py-3 rounded-lg hover:bg-[#1e3a8a] font-medium transition"
+                  >
+                    Submit Review
+                  </button>
+                </div>
+              )} */}
+
+            {/* Action Buttons + Return Order */}
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
+
               <button
                 onClick={() => downloadInvoice(selectedOrder)}
                 className="flex-1 bg-white border-2 border-[#172554] text-[#172554] py-3 rounded-lg hover:bg-[#172554] hover:text-white font-medium transition"
               >
                 Download Invoice
               </button>
+
               <button
                 onClick={copyInvoiceNo}
                 className="flex-1 bg-white border-2 border-[#172554] text-[#172554] py-3 rounded-lg hover:bg-[#172554] hover:text-white font-medium transition"
               >
                 Copy Invoice No
               </button>
+
+              {/* Return Order Button - Only for Delivered Orders within 7 days */}
+              {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
+                const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt || selectedOrder.createdAt);
+                const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
+                return daysSinceDelivery <= 7;
+              })() && (
+                <button
+                  onClick={() => setShowReturn(true)}
+                  className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-medium transition flex items-center justify-center gap-2 shadow-md"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Return Order
+                </button>
+              )}
+
+              {/* Return Already Requested */}
+              {selectedOrder.returnRequested && (
+                <div className="text-center text-green-600 font-medium bg-green-50 py-3 px-2 rounded-lg">
+                  Return Request Submitted
+                </div>
+              )}
+
+              {/* Return Window Closed */}
+              {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
+                const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt);
+                const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
+                return daysSinceDelivery > 7;
+              })() && (
+                <div className="text-center text-gray-500 italic text-sm">
+                  Return window closed ({Math.floor((new Date() - new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt)) / (1000*60*60*24))} days ago)
+                </div>
+              )}
+
             </div>
           </div>
         </div>
