@@ -391,42 +391,41 @@ export default function ProductDetailPage({ product }) {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-24 sm:px-6 lg:px-6">
-
          <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-24 space-y-4">
               <div 
-                className="relative bg-[#f5f3f0] rounded-xl overflow-hidden shadow-xl border border-gray-100"
+                className="relative rounded-xl overflow-hidden  "
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
               >
-                <div className="relative  aspect-square">
-                  {images.map((img, i) => (
-                    <Image
-                      key={i}
-                      src={img}
-                      alt={`${name} - Image ${i + 1}`}
-                      fill
-                      className={`object-contain transition-opacity duration-1000 ease-in-out ${
-                        selectedImage === i ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      priority={i === 0}
-                      sizes="(max-width: 1024px) 100vw, 40vw"
-                      onError={(e) => e.currentTarget.src = "/fallback.jpg"}
-                    />
-                  ))}
+                <div className="relative aspect-square rounded-3xl border border-gray-100 overflow-hidden">
 
-                  {/* Image Counter */}
-                  {images.length > 1 && (
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold shadow-md z-10">
-                      {selectedImage + 1} / {images.length}
-                    </div>
-                  )}
+                  <div className="absolute inset-0 p-2">
+
+                    {images.map((img, i) => (
+                      <Image
+                        key={i}
+                        src={img}
+                        alt={`${name} - Image ${i + 1}`}
+                        fill
+                        className={`object-contain transition-opacity duration-1000 ease-in-out ${
+                          selectedImage === i ? "opacity-100" : "opacity-0"
+                        }`}
+                        priority={i === 0}
+                        sizes="(max-width: 1024px) 100vw, 40vw"
+                        onError={(e) => (e.currentTarget.src = "/fallback.jpg")}
+                      />
+                    ))}
+                    {images.length > 1 && (
+                      <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold shadow-md">
+                        {selectedImage + 1} / {images.length}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {/* Thumbnails at Bottom */}
                 {images.length > 1 && (
-                  <div className="p-4 bg-[#f5f3f0] border-t border-gray-100">
-                    <div className="flex gap-3 justify-center overflow-x-auto scrollbar-hide">
+                  <div className="p-4  ">
+                    <div className="flex gap-3 justify-start overflow-x-auto scrollbar-hide">
                       {images.map((img, i) => (
                         <button
                           key={i}
@@ -453,7 +452,6 @@ export default function ProductDetailPage({ product }) {
           </div>
 
           <div className="lg:col-span-7 space-y-4">
-
             <div>
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>
                 {name}
@@ -625,9 +623,7 @@ export default function ProductDetailPage({ product }) {
             </div>
           )}
         </div>
-
       </div>
-
       <div className="mt-20">
         <StayInspired />
       </div>

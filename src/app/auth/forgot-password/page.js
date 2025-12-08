@@ -46,7 +46,7 @@ const handleReset = async (e) => {
       <div className="absolute inset-0 bg-black/60"></div>
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-md bg-[#f5f3f0] backdrop-blur-sm p-8 rounded-lg shadow-2xl border border-gray-200">
+      <div className="relative z-10 w-full max-w-lg bg-[#f5f3f0] backdrop-blur-sm p-8 rounded-lg shadow-2xl border border-gray-200">
         {/* Back to Home */}
         <button
           onClick={() => router.push("/")}
