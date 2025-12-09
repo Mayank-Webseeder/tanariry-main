@@ -218,7 +218,7 @@
 //       <div className="absolute inset-0 bg-[#1E3A8A]/10 rounded-full blur-3xl animate-pulse"></div>
 //       <div className="relative bg-[#1E3A8A] w-full h-full rounded-full flex items-center justify-center shadow-2xl">
 //         <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+//           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
 //             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 //         </svg>
 //       </div>
@@ -228,18 +228,18 @@
 //     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
 //       Welcome Back!
 //     </h1>
-    
+
 //     <p className="text-lg text-gray-600 mb-8 leading-relaxed">
 //       You need to <span className="text-[#1E3A8A] font-semibold">sign in</span> to continue shopping and access your wishlist & cart.
 //     </p>
 
 //     {/* Login Button */}
-//     <Link 
+//     <Link
 //       href="/auth/login"
 //       className="inline-flex items-center gap-3 bg-[#1E3A8A] hover:bg-[#172554] text-white font-semibold text-lg px-10 py-4 rounded-xl shadow-lg transform transition-all duration-200 hover:shadow-2xl"
 //     >
 //       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+//         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
 //           d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
 //       </svg>
 //       Sign In Now
@@ -364,6 +364,7 @@
 //     </div>
 //   );
 // }
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -371,11 +372,22 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
-import { Package, Truck, CreditCard, CheckCircle } from "lucide-react";
+import { Package, Truck, CreditCard } from "lucide-react";
 import StayInspired from "@/components/home/StayInspired";
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+
+    // If script already exists, resolve immediately
+    if (
+      document.querySelector(
+        'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      )
+    ) {
+      return resolve(true);
+    }
+
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => resolve(true);
@@ -407,27 +419,27 @@ export default function CheckoutPage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
- useEffect(() => {
-  if (authLoading) return;
+  useEffect(() => {
+    if (authLoading) return;
 
-  if (!user) {
-    toast.error("Please login to checkout");
-    router.push("/auth/login");
-    return;
-  }
+    if (!user) {
+      toast.error("Please login to checkout");
+      router.push("/auth/login");
+      return;
+    }
 
-  if (cart.length === 0) {
-    toast.error("Your cart is empty");
-    router.push("/cart");
-    return;
-  }
+    if (cart.length === 0) {
+      toast.error("Your cart is empty");
+      router.push("/cart");
+      return;
+    }
 
-  if (!user.addresses || user.addresses.length === 0) {
-    toast.error("Please add a shipping address first");
-    router.push("/profile?tab=addresses");
-    return;
-  }
-}, [authLoading, user, cart, router]);
+    if (!user.addresses || user.addresses.length === 0) {
+      toast.error("Please add a shipping address first");
+      router.push("/profile?tab=addresses");
+      return;
+    }
+  }, [authLoading, user, cart, router]);
 
   const handlePlaceOrder = async () => {
     if (!formData.shippingAddress) {
@@ -443,7 +455,9 @@ export default function CheckoutPage() {
     setPlacingOrder(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
       if (!token) {
         toast.error("Please login again");
         router.push("/auth/login");
@@ -473,7 +487,7 @@ export default function CheckoutPage() {
             subtotal: priceInPaise * quantity,
           };
         }),
-        totalAmount: Math.round(total * 100),
+        totalAmount: Math.round(total),
         shippingAddress: {
           address: shippingAddr.address,
           city: shippingAddr.city,
@@ -483,33 +497,36 @@ export default function CheckoutPage() {
         },
       };
 
-      if (paymentMethod === "online") {
-        payload.paymentMethod = "online";
-      }
+      console.log("Payload total amount in paise:", payload.totalAmount);
 
-      // COD Flow
       if (paymentMethod === "cod") {
-        const res = await fetch(`${API_BASE}/api/orders/createOrderByCustomer`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(
+          `${API_BASE}/api/orders/createOrderByCustomer`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const data = await res.json();
 
         if (!res.ok) {
-          const err = await res.json();
-          toast.error(err.message || "COD order failed");
+          toast.error(data.message || "COD order failed");
           return;
         }
 
         toast.success("Order placed! Pay on delivery");
         clearCart();
-        localStorage.removeItem("cart");
-        sessionStorage.setItem("justPlacedOrder", "true");
-        sessionStorage.setItem("showOrderSuccess", "true");
-        window.location.href = "/orders";  
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("cart");
+          sessionStorage.setItem("justPlacedOrder", "true");
+          sessionStorage.setItem("showOrderSuccess", "true");
+          window.location.href = "/orders";
+        }
         return;
       }
 
@@ -521,21 +538,39 @@ export default function CheckoutPage() {
         return;
       }
 
-      const orderRes = await fetch(`${API_BASE}/api/orders/createOrderByCustomer`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const orderRes = await fetch(
+        `${API_BASE}/api/orders/createOrderByCustomer`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      if (!orderRes.ok) throw new Error("Failed to create order");
+      if (!orderRes.ok) {
+        const err = await orderRes.json();
+        toast.error(err.message || "Failed to create order");
+        setPlacingOrder(false);
+        return;
+      }
 
       const orderData = (await orderRes.json()).data;
 
+      console.log("orderData from backend:", orderData);
+
       if (!orderData?.razorpayOrder) {
-        throw new Error("Payment details missing");
+        toast.error("Payment details missing");
+        setPlacingOrder(false);
+        return;
+      }
+
+      if (typeof window === "undefined" || !window.Razorpay) {
+        toast.error("Payment gateway not initialized. Please try again.");
+        setPlacingOrder(false);
+        return;
       }
 
       const options = {
@@ -546,34 +581,45 @@ export default function CheckoutPage() {
         description: "Order Payment",
         order_id: orderData.razorpayOrder.id,
         handler: async (response) => {
-          const verifyPayload = {
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            orderId: orderData.order._id,
-          };
+          try {
+            const verifyPayload = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderId: orderData.order._id,
+            };
 
-          const verifyRes = await fetch(`${API_BASE}/api/razorpay/verify`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(verifyPayload),
-          });
+            const verifyRes = await fetch(`${API_BASE}/api/razorpay/verify`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(verifyPayload),
+            });
 
-          if (verifyRes.ok) {
-            toast.success("Payment successful! Order placed");
-            clearCart();
-            localStorage.removeItem("cart");
-            sessionStorage.setItem("justPlacedOrder", "true");
-            window.location.href = "/orders";
-          } else {
-            toast.error("Payment failed. Please try again.");
+            if (verifyRes.ok) {
+              toast.success("Payment successful! Order placed");
+              clearCart();
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("cart");
+                sessionStorage.setItem("justPlacedOrder", "true");
+                window.location.href = "/orders";
+              }
+            } else {
+              const vErr = await verifyRes.json().catch(() => ({}));
+              console.error("Verify error:", vErr);
+              toast.error("Payment failed. Please contact support.");
+            }
+          } catch (e) {
+            console.error(e);
+            toast.error("Payment verification failed. Please try again.");
           }
         },
         prefill: {
-          name: user.name || user.firstName + " " + user.lastName,
+          name:
+            user.name ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
           email: user.email,
           contact: user.phone || "",
         },
@@ -593,15 +639,26 @@ export default function CheckoutPage() {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="bg-[#f5f3f0]">
         <div className="mx-auto px-8 py-12">
-
           <div className="relative inline-block pb-3 mb-6">
-            <h1 className="text-5xl text-[#172554]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}>
+            <h1
+              className="text-5xl text-[#172554]"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 400,
+              }}
+            >
               Checkout
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
@@ -610,7 +667,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+            {/* Left side */}
             <div className="lg:col-span-2 space-y-6">
               {/* Shipping Address */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -619,10 +676,11 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-semibold">Shipping Address</h2>
                 </div>
 
-                {/* Agar user ya addresses nahi hain (extra safety) */}
                 {!user || !user.addresses || user.addresses.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-red-600 mb-4">No shipping address found</p>
+                    <p className="text-red-600 mb-4">
+                      No shipping address found
+                    </p>
                     <button
                       onClick={() => router.push("/profile?tab=addresses")}
                       className="text-[#172554] underline font-medium hover:text-[#0f1e3d]"
@@ -633,7 +691,12 @@ export default function CheckoutPage() {
                 ) : (
                   <select
                     value={formData.shippingAddress}
-                    onChange={(e) => setFormData({ ...formData, shippingAddress: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        shippingAddress: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#172554] focus:border-[#172554] outline-none"
                     required
                   >
@@ -665,7 +728,9 @@ export default function CheckoutPage() {
                     />
                     <div className="flex-1">
                       <div className="font-medium">Online Payment</div>
-                      <div className="text-sm text-gray-600">Credit/Debit Card, UPI, Netbanking</div>
+                      <div className="text-sm text-gray-600">
+                        Credit/Debit Card, UPI, Netbanking
+                      </div>
                     </div>
                     <CreditCard className="w-6 h-6 text-gray-500" />
                   </label>
@@ -681,7 +746,9 @@ export default function CheckoutPage() {
                     />
                     <div className="flex-1">
                       <div className="font-medium">Cash on Delivery (COD)</div>
-                      <div className="text-sm text-gray-600">Pay when you receive</div>
+                      <div className="text-sm text-gray-600">
+                        Pay when you receive
+                      </div>
                     </div>
                     <Package className="w-6 h-6 text-gray-500" />
                   </label>
@@ -692,13 +759,22 @@ export default function CheckoutPage() {
             {/* Right side - Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
-                <h2 className="text-xl font-semibold mb-5 pb-4 border-b">Order Summary</h2>
+                <h2 className="text-xl font-semibold mb-5 pb-4 border-b">
+                  Order Summary
+                </h2>
 
                 <div className="space-y-4 text-sm mb-6">
                   {cart.map((item) => (
                     <div key={item._id} className="flex justify-between">
-                      <span className="text-gray-600">{item.productName || item.name} × {item.quantity}</span>
-                      <span className="font-medium">₹{(getPrice(item) * item.quantity).toLocaleString("en-IN")}</span>
+                      <span className="text-gray-600">
+                        {item.productName || item.name} × {item.quantity}
+                      </span>
+                      <span className="font-medium">
+                        ₹
+                        {(getPrice(item) * (item.quantity || 1)).toLocaleString(
+                          "en-IN"
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>

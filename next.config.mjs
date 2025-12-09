@@ -3,9 +3,9 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'api.tanaririllp.com',
-        pathname: '/uploads/**',        
+        protocol: "https",
+        hostname: "api.tanaririllp.com",
+        pathname: "/uploads/**",
       },
       {
         protocol: "https",
@@ -16,6 +16,12 @@ const nextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
         pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "5000",
+        pathname: "/uploads/**",
       },
     ],
   },
