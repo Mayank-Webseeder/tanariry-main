@@ -10,7 +10,6 @@ import { useWishlist } from '@/context/WishlistContext';
 // import WishlistSidebar from './WishlistSidebar';
 import { useAuth } from '@/context/AuthContext';
 
-
 export default function Header() {
   const { isLoggedIn, loading: authLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -147,7 +146,6 @@ export default function Header() {
                         </ul>
                       </div>
 
-                 
                       <div>
                         <h4 className="font-semibold text-pink-500 mb-4 text-base">Dining Room</h4>
                         <ul className="space-y-3 text-gray-600">
@@ -296,59 +294,72 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* FULL SCREEN CENTERED MOBILE MENU — LUXURY & PREMIUM */}
         {isMobileMenuOpen && (
-          <nav className="lg:hidden py-4 border-t border-gray-200">
-            <ul className="space-y-3">
-              <li>
-                <Link 
-                  href="/" 
-                  onClick={() => setIsMobileMenuOpen(false)} 
-                  className={`${navLinkClass('/')} ${underlineStyle('/')}`} 
-                  style={{ fontFamily: "'Playfair Display', serif", fontSize: '15px', fontWeight: '500' }}
-                >
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/products" 
-                  onClick={() => setIsMobileMenuOpen(false)} 
-                  className={`${navLinkClass('/products')} ${underlineStyle('/products')}`} 
-                  style={{ fontFamily: "'Playfair Display', serif", fontSize: '15px', fontWeight: '500' }}
-                >
-                  Products
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/about" 
-                  onClick={() => setIsMobileMenuOpen(false)} 
-                  className={`${navLinkClass('/about')} ${underlineStyle('/about')}`} 
-                  style={{ fontFamily: "'Playfair Display', serif", fontSize: '15px', fontWeight: '500' }}
-                >
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/contact" 
-                  onClick={() => setIsMobileMenuOpen(false)} 
-                  className={`${navLinkClass('/contact')} ${underlineStyle('/contact')}`} 
-                  style={{ fontFamily: "'Playfair Display', serif", fontSize: '15px', fontWeight: '500' }}
-                >
-                  Contact
-                </Link>
-              </li>
-            </ul>
-          </nav>
+          <div className="lg:hidden fixed inset-0 z-50 bg-[#f5f3f0] flex items-center justify-center">
+            {/* Close Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-6 right-6 p-3 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Centered Navigation */}
+            <nav className="text-center">
+              <ul className="space-y-10">
+                <li>
+                  <Link
+                    href="/"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-4xl font-playfair text-[#1E3A8A] hover:text-pink-600 transition-colors duration-300 tracking-wider"
+                  >
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/products"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-4xl font-playfair text-[#1E3A8A] hover:text-pink-600 transition-colors duration-300 tracking-wider"
+                  >
+                    Products
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/about"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-4xl font-playfair text-[#1E3A8A] hover:text-pink-600 transition-colors duration-300 tracking-wider"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/contact"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-4xl font-playfair text-[#1E3A8A] hover:text-pink-600 transition-colors duration-300 tracking-wider"
+                  >
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            {/* Logo at Bottom */}
+            <div className="absolute bottom-10">
+              <img src="/logo.png" alt="TanaRiri" className="h-12 opacity-60" />
+            </div>
+          </div>
         )}
       </div>
 
       {/* Cart Sidebar */}
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
-      {/* Wishlist Sidebar */}
       {/* <WishlistSidebar isOpen={isWishlistOpen} onClose={() => setIsWishlistOpen(false)} /> */}
     </header>
   );

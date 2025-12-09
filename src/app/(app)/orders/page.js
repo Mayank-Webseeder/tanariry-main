@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import StayInspired from "@/components/home/StayInspired";
 import toast from "react-hot-toast";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from '@/context/AuthContext';
 import { CheckCircle } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-const IMG_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
+const IMG_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -27,66 +27,63 @@ export default function OrdersPage() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImages, setReturnImages] = useState([]);
 
-  // Delhivery tracking state
-  const [tracking, setTracking] = useState({
-    loading: false,
-    events: [],
-    error: null,
+  const formatPrice = (amountInPaise) => {
+  const rupees = Number(amountInPaise || 0) / 100;
+  return rupees.toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
   });
+};
 
   // Return Order Request
-  const requestReturn = async () => {
-    if (!returnReason) return toast.error("Please write a reason");
-    if (returnImages.length === 0)
-      return toast.error("Please upload at least one image");
+const requestReturn = async () => {
+  if (!returnReason) return toast.error("Please write a reason");
+  if (returnImages.length === 0) return toast.error("Please upload at least one image");
 
-    const token = localStorage.getItem("token");
-    const formData = new FormData();
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
 
-    formData.append("reason", returnReason);
-    formData.append("reasonCategory", "damaged"); // या dynamic कर सकते हो
+  formData.append("reason", returnReason);
+  formData.append("reasonCategory", "damaged");
 
-    returnImages.forEach((image) => {
-      formData.append("images", image);
+  returnImages.forEach((image) => {
+    formData.append("images", image);
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/return-request`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
     });
 
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/orders/${selectedOrder._id}/return-request`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (res.ok) {
-        toast.success("Return request submitted successfully!");
-        setShowReturn(false);
-        setReturnReason("");
-        setReturnImages([]);
-
-        setSelectedOrder({ ...selectedOrder, returnRequested: true });
-      } else {
-        const error = await res.json();
-        toast.error(error.message || "Failed to submit return request");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Network error");
+    if (res.ok) {
+      toast.success("Return request submitted successfully!");
+      setShowReturn(false);
+      setReturnReason("");
+      setReturnImages([]);
+      
+      setSelectedOrder({ ...selectedOrder, returnRequested: true });
+    } else {
+      const error = await res.json();
+      toast.error(error.message || "Failed to submit return request");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("Network error");
+  }
+};
 
   const getNormalizedStatus = (order) => {
-    return (
-      order?.orderStatus ||
-      order?.status ||
-      order?.paymentStatus ||
-      "Pending"
-    ).toLowerCase();
-  };
+  return (
+    order?.orderStatus ||
+    order?.status ||
+    order?.paymentStatus ||
+    "Pending"
+  ).toLowerCase();
+};
 
   useEffect(() => {
     const justPlaced = sessionStorage.getItem("justPlacedOrder");
@@ -98,12 +95,12 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const statusSteps = [
-    { status: "pending", label: "Order Placed" },
-    { status: "processing", label: "Preparing" },
-    { status: "shipped", label: "On the Way" },
-    { status: "delivered", label: "Delivered" },
-  ];
+const statusSteps = [
+  { status: "pending",    label: "Order Placed" },
+  { status: "processing", label: "Preparing" },
+  { status: "shipped",    label: "On the Way" },
+  { status: "delivered",  label: "Delivered" },
+];
 
   // Fetch all orders for the logged-in user
   const fetchOrders = async () => {
@@ -126,19 +123,14 @@ export default function OrdersPage() {
       if (!res.ok) throw new Error("Failed to fetch orders");
 
       const result = await res.json();
-      const finalOrders =
-        result?.data?.orders || result?.orders || result?.data || [];
+      const finalOrders = result?.data?.orders || result?.orders || result?.data || [];
 
       setOrders(finalOrders);
 
       if (finalOrders.length === 0) {
         toast.success("No orders found yet");
       } else {
-        toast.success(
-          `${finalOrders.length} order${
-            finalOrders.length > 1 ? "s" : ""
-          } loaded!`
-        );
+        toast.success(`${finalOrders.length} order${finalOrders.length > 1 ? 's' : ''} loaded!`);
       }
     } catch (err) {
       console.error("Failed to load orders:", err);
@@ -158,42 +150,6 @@ export default function OrdersPage() {
     fetchOrders();
   }, [authLoading, user]);
 
-  // Fetch Delhivery tracking from your backend
-  const fetchTracking = async (waybill) => {
-    if (!waybill) {
-      setTracking({ loading: false, events: [], error: null });
-      return;
-    }
-
-    try {
-      setTracking((prev) => ({ ...prev, loading: true, error: null }));
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`/api/shipping/track/${waybill}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to fetch tracking");
-
-      const data = await res.json();
-
-      // Normalize: adjust to match your backend response
-      // Example if you map Delhivery "ScanDetail" list to `events`
-      const events = data?.events || data?.tracking || data?.data || [];
-
-      setTracking({ loading: false, events, error: null });
-    } catch (err) {
-      console.error(err);
-      setTracking({
-        loading: false,
-        events: [],
-        error: "Unable to load tracking",
-      });
-    }
-  };
-
   const openModal = (order) => {
     if (!order) return toast.error("Order data missing");
     setSelectedOrder(order);
@@ -202,27 +158,11 @@ export default function OrdersPage() {
     setCancelReason("");
     setRating(0);
     setReview("");
-    setShowReturn(false);
-    setReturnReason("");
-    setReturnImages([]);
-    setTracking({ loading: false, events: [], error: null });
-
-    // Detect waybill from order
-    const waybill =
-      order.waybill ||
-      order.awb ||
-      order.trackingId ||
-      order.shipmentDetails?.waybill;
-
-    if (waybill) {
-      fetchTracking(waybill);
-    }
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedOrder(null);
-    setTracking({ loading: false, events: [], error: null });
   };
 
   // Download invoice as PDF
@@ -236,13 +176,10 @@ export default function OrdersPage() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(
-        `${API_BASE}/api/orders/${orderId}/invoice`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await fetch(`${API_BASE}/api/orders/${orderId}/invoice`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
@@ -263,40 +200,45 @@ export default function OrdersPage() {
     }
   };
 
-  // Cancel order
-  const cancelOrder = async () => {
-    if (!cancelReason)
-      return toast.error("Please select a cancellation reason");
+const cancelOrderByCustomer = async () => {
+  if (!selectedOrder) return toast.error("Order not found");
 
+  if (getNormalizedStatus(selectedOrder) !== "pending") {
+    return toast.error("Only pending orders can be cancelled");
+  }
+
+  const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
+  if (!confirmCancel) return;
+
+  try {
     const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderStatus: "Cancelled",
-          cancellationReason: cancelReason,
-        }),
-      });
+    const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/cancel-by-customer`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      if (res.ok) {
-        toast.success("Order cancelled successfully");
-        setOrders((prev) =>
-          prev.map((o) =>
-            o._id === selectedOrder._id ? { ...o, orderStatus: "Cancelled" } : o
-          )
-        );
-        closeModal();
-      } else {
-        toast.error("Failed to cancel order");
-      }
-    } catch (err) {
-      toast.error("Something went wrong");
+    const result = await res.json();
+
+    if (res.ok) {
+      toast.success("Order cancelled successfully!");
+
+      setOrders(prev => prev.map(o =>
+        o._id === selectedOrder._id ? { ...o, orderStatus: "Cancelled" } : o
+      ));
+      setSelectedOrder({ ...selectedOrder, orderStatus: "Cancelled" });
+      setShowCancel(false);
+      closeModal();
+    } else {
+      toast.error(result.message || "Failed to cancel order");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("Network error");
+  }
+};
 
   const copyInvoiceNo = () => {
     const invoiceNo =
@@ -309,9 +251,10 @@ export default function OrdersPage() {
     toast.success("Invoice number copied!");
   };
 
-  const currentIndex = statusSteps.findIndex(
-    (step) => step.status === getNormalizedStatus(selectedOrder)
-  );
+
+const currentIndex = statusSteps.findIndex(
+  (step) => step.status === getNormalizedStatus(selectedOrder)
+);
 
   // Skeleton loader
   const SkeletonRow = () => (
@@ -337,29 +280,14 @@ export default function OrdersPage() {
     <div className="text-center py-16 px-6">
       <div className="max-w-md mx-auto">
         <div className="mx-auto w-24 h-24 mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-          <svg
-            className="w-12 h-12 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-            />
+          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
         </div>
-        <h3
-          className="text-2xl font-semibold text-gray-800 mb-3"
-          style={{ fontFamily: "'Playfair Display', serif" }}
-        >
+        <h3 className="text-2xl font-semibold text-gray-800 mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
           No Orders Yet
         </h3>
-        <p className="text-gray-500 mb-8">
-          Looks like you haven't placed any orders yet.
-        </p>
+        <p className="text-gray-500 mb-8">Looks like you haven't placed any orders yet.</p>
         <Link
           href="/products"
           className="inline-flex items-center gap-2 bg-[#1E3A8A] text-white hover:bg-[#172554] px-8 py-3 rounded-md font-medium"
@@ -376,13 +304,7 @@ export default function OrdersPage() {
         <div className="w-full space-y-6">
           {/* Page Title */}
           <div className="relative inline-block pb-6">
-            <h1
-              className="text-5xl text-[#172554]"
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 400,
-              }}
-            >
+            <h1 className="text-5xl text-[#172554]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400 }}>
               My Orders
             </h1>
             <div className="absolute left-0 bottom-0 h-1 bg-[#172554] rounded-full w-full overflow-hidden">
@@ -399,13 +321,8 @@ export default function OrdersPage() {
               </div>
             ) : !user ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 mb-6">
-                  Please log in to view your orders.
-                </p>
-                <Link
-                  href="/auth/login"
-                  className="bg-black text-white hover:bg-gray-800 px-6 py-3 rounded-md"
-                >
+                <p className="text-gray-500 mb-6">Please log in to view your orders.</p>
+                <Link href="/auth/login" className="bg-black text-white hover:bg-gray-800 px-6 py-3 rounded-md">
                   Login
                 </Link>
               </div>
@@ -414,17 +331,13 @@ export default function OrdersPage() {
             ) : (
               <div className="space-y-8">
                 {orders.map((order) => (
-                  <div
-                    key={order._id}
-                    className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0"
-                  >
+                  <div key={order._id} className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
                     <div className="grid grid-cols-3 gap-4 md:gap-8 text-md">
                       <div className="space-y-4">
                         <div>
                           <span className="text-gray-600">Order: </span>
                           <span className="font-medium text-[#172554]">
-                            {order.invoiceDetails?.[0]?.invoiceNo ||
-                              `#${order._id?.slice(-6).toUpperCase()}`}
+                            {order.invoiceDetails?.[0]?.invoiceNo || `#${order._id?.slice(-6).toUpperCase()}`}
                           </span>
                         </div>
                         <div>
@@ -439,18 +352,14 @@ export default function OrdersPage() {
                                 ? "border-blue-600 text-blue-600 bg-blue-50"
                                 : getNormalizedStatus(order) === "processing"
                                 ? "border-purple-600 text-purple-600 bg-purple-50"
-                                : "border-[#172554] text-[#172554] bg-[#172554]/5"
+                                : "border-[#172554] text-[#172554] bg-[#172554]/5" 
                             }`}
                           >
-                            {getNormalizedStatus(order) === "delivered"
-                              ? "Delivered"
-                              : getNormalizedStatus(order) === "cancelled"
-                              ? "Cancelled"
-                              : getNormalizedStatus(order) === "shipped"
-                              ? "Shipped"
-                              : getNormalizedStatus(order) === "processing"
-                              ? "Processing"
-                              : "Order Placed"}
+                            {getNormalizedStatus(order) === "delivered" ? "Delivered" :
+                            getNormalizedStatus(order) === "cancelled" ? "Cancelled" :
+                            getNormalizedStatus(order) === "shipped" ? "Shipped" :
+                            getNormalizedStatus(order) === "processing" ? "Processing" :
+                            "Order Placed"}
                           </span>
                         </div>
                       </div>
@@ -458,17 +367,15 @@ export default function OrdersPage() {
                       <div className="space-y-4">
                         <div>
                           <span className="text-gray-600">Date: </span>
-                          {new Date(order.createdAt).toLocaleDateString(
-                            "en-IN"
-                          )}
+                          {new Date(order.createdAt).toLocaleDateString("en-IN")}
                         </div>
                         <div>
                           <span className="text-gray-600">Total: </span>
                           <span className="font-medium">
-                            ₹
-                            {Number(
-                              order.paymentTotal || order.totalAmount || 0
-                            ).toFixed(2)}
+                            ₹{Number(order.paymentTotal || order.totalAmount || 0 / 100).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            })}
                           </span>
                         </div>
                       </div>
@@ -503,36 +410,20 @@ export default function OrdersPage() {
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2
-                  className="text-2xl font-semibold text-[#172554]"
-                  style={{ fontFamily: "'Playfair Display', serif" }}
-                >
+                <h2 className="text-2xl font-semibold text-[#172554]" style={{ fontFamily: "'Playfair Display', serif" }}>
                   Order Details
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Invoice{" "}
+                  Invoice:{' '}
                   {selectedOrder?.invoiceDetails?.[0]?.invoiceNo ||
                     selectedOrder?.invoiceNo ||
                     `#${selectedOrder?._id?.slice(-6).toUpperCase()}` ||
                     "N/A"}
                 </p>
               </div>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -551,11 +442,9 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Products List */}
+            {/* Products List - FULLY FIXED */}
             <div className="border-t pt-6 mb-6">
-              <h4 className="font-semibold text-lg mb-4 text-[#172554]">
-                Products
-              </h4>
+              <h4 className="font-semibold text-lg mb-4 text-[#172554]">Products</h4>
 
               {(() => {
                 const items =
@@ -566,81 +455,40 @@ export default function OrdersPage() {
                   [];
 
                 if (!items || items.length === 0) {
-                  return (
-                    <p className="text-gray-500 italic text-sm">
-                      No products found in this order.
-                    </p>
-                  );
+                  return <p className="text-gray-500 italic text-sm">No products found in this order.</p>;
                 }
 
                 return (
                   <div className="space-y-4">
                     {items.map((item, index) => {
                       const product = item.productId || item.product || item;
-                      const name =
-                        product?.productName ||
-                        product?.title ||
-                        "Product Name";
+                      const name = product?.productName || product?.title || "Product Name";
 
-                      const rawImage =
-                        product?.productImages?.[0] || product?.images?.[0];
-                      const cleanImage = rawImage
-                        ?.replace(/^uploads\//, "")
-                        .replace(/^\/+/, "");
+                      const rawImage = product?.productImages?.[0] || product?.images?.[0];
+                      const cleanImage = rawImage?.replace(/^uploads\//, "").replace(/^\/+/, "");
+                      const imageUrl = cleanImage ? `${IMG_URL}/${cleanImage}` : "/fallback.jpg";
 
-                      const imageUrl = cleanImage
-                        ? `${IMG_URL}/${cleanImage}`
-                        : "/fallback.jpg";
-
-                      const price = Number(
-                        item.price ||
-                          product?.discountPrice ||
-                          product?.price ||
-                          0
-                      );
+                      const priceInRupees = (Number(item.price || product?.discountPrice || product?.price || 0) / 100);
                       const qty = Number(item.quantity || item.qty || 1);
+                      const totalInRupees = priceInRupees * qty;
 
                       return (
                         <div
                           key={item._id || index}
                           className="flex gap-4 pb-4 border-b border-gray-100 last:border-0"
                         >
-                          {/* Uncomment if you want images */}
-                          {/* <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-50 border border-gray-200 flex-shrink-0">
-                            <img
-                              src={imageUrl}
-                              alt={name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                if (!e.target.src.includes("placeholder.com")) {
-                                  e.target.src = "https://via.placeholder.com/80x80/f3f4f6/9ca3af?text=TANARIRI";
-                                }
-                              }}
-                            />
-                          </div> */}
-
                           <div className="flex-1">
-                            <h5 className="font-medium text-gray-900">
-                              {name}
-                            </h5>
-                            {item.size && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Size {item.size}
-                              </p>
-                            )}
-                            {item.color && (
-                              <p className="text-xs text-gray-500">
-                                Color {item.color}
-                              </p>
-                            )}
+                            <h5 className="font-medium text-gray-900">{name}</h5>
+                            {item.size && <p className="text-xs text-gray-500 mt-1">Size: {item.size}</p>}
+                            {item.color && <p className="text-xs text-gray-500">Color: {item.color}</p>}
                             <p className="text-sm text-gray-600 mt-1">
-                              {qty} × ₹{price.toFixed(2)}
+                              {qty} × ₹{priceInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
 
                           <div className="text-right">
-                            <p className="font-semibold text-[#172554]">
-                              ₹{(price * qty).toFixed(2)}
+                            <p className="font-bold text-xl text-[#172554]">
+                              ₹{totalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                         </div>
@@ -655,39 +503,21 @@ export default function OrdersPage() {
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>
-                  ₹
-                  {(
-                    selectedOrder?.paymentTotal ||
-                    selectedOrder?.totalAmount ||
-                    0
-                  ).toFixed(2)}
-                </span>
+                <span>₹{(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Discount</span>
-                <span className="text-green-600">
-                  -₹{(selectedOrder?.discount || 0).toFixed(2)}
-                </span>
+                <span className="text-green-600">-₹{(selectedOrder?.discount || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg pt-3 border-t border-gray-300 text-[#172554]">
                 <span>Total Paid</span>
-                <span>
-                  ₹
-                  {(
-                    selectedOrder?.paymentTotal ||
-                    selectedOrder?.totalAmount ||
-                    0
-                  ).toFixed(2)}
-                </span>
+                <span>₹{(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0).toFixed(2)}</span>
               </div>
             </div>
 
             {/* Order Tracking */}
             <div className="mb-8">
-              <h4 className="font-medium mb-4 text-[#172554]">
-                Order Tracking
-              </h4>
+              <h4 className="font-medium mb-4 text-[#172554]">Order Tracking</h4>
               <div className="relative">
                 <div className="flex justify-between">
                   {statusSteps.map((step, i) => (
@@ -701,11 +531,7 @@ export default function OrdersPage() {
                       >
                         {i + 1}
                       </div>
-                      <p
-                        className={`text-xs mt-2 font-medium ${
-                          i <= currentIndex ? "text-[#172554]" : "text-gray-500"
-                        }`}
-                      >
+                      <p className={`text-xs mt-2 font-medium ${i <= currentIndex ? "text-[#172554]" : "text-gray-500"}`}>
                         {step.label}
                       </p>
                     </div>
@@ -716,146 +542,19 @@ export default function OrdersPage() {
                     <div
                       className="h-full bg-[#172554] transition-all duration-500"
                       style={{
-                        width:
-                          currentIndex >= 0
-                            ? `${
-                                (currentIndex / (statusSteps.length - 1)) * 100
-                              }%`
-                            : "0%",
+                        width: currentIndex >= 0 ? `${(currentIndex / (statusSteps.length - 1)) * 100}%` : "0%",
                       }}
                     />
                   </div>
                 </div>
               </div>
-
-              {/* Courier Tracking (Delhivery) */}
-              <div className="mt-6">
-                <h5 className="font-medium mb-3 text-[#172554]">
-                  Courier Updates (Delhivery)
-                </h5>
-
-                {tracking.loading && (
-                  <p className="text-sm text-gray-500">
-                    Loading live tracking...
-                  </p>
-                )}
-
-                {tracking.error && !tracking.loading && (
-                  <p className="text-sm text-red-500">{tracking.error}</p>
-                )}
-
-                {!tracking.loading &&
-                  !tracking.error &&
-                  tracking.events.length === 0 && (
-                    <p className="text-sm text-gray-500 italic">
-                      No courier updates available yet.
-                    </p>
-                  )}
-
-                {!tracking.loading && tracking.events.length > 0 && (
-                  <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-                    {tracking.events.map((ev, idx) => (
-                      <div key={idx} className="flex gap-3 items-start">
-                        <div className="mt-1">
-                          <div className="w-2 h-2 rounded-full bg-[#172554]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">
-                            {ev.status || ev.Scan || ev.scan || "Update"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {(
-                              ev.location ||
-                              ev.ScannedLocation ||
-                              ev.city ||
-                              ev.branch ||
-                              ""
-                            ).toString()}
-                            {(ev.location ||
-                              ev.ScannedLocation ||
-                              ev.city ||
-                              ev.branch) &&
-                              " · "}
-                            {ev.time ||
-                              ev.ScanDateTime ||
-                              ev.scanned_at ||
-                              ev.timestamp}
-                          </p>
-                          {(ev.remark || ev.Instructions) && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {ev.remark || ev.Instructions}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
-
-            {/* Cancel Order Option */}
-            {getNormalizedStatus(selectedOrder) === "pending" && (
-              <div className="mb-6 p-4 border border-red-200 rounded-xl bg-white hover:bg-red-50">
-                <button
-                  onClick={() => setShowCancel(!showCancel)}
-                  className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18 6L6 18M6 6l12 12"
-                    />
-                  </svg>
-                  Cancel Order
-                </button>
-
-                {showCancel && (
-                  <div className="mt-4 space-y-4">
-                    <select
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500"
-                    >
-                      <option value="">Select Reason</option>
-                      <option>Changed my mind</option>
-                      <option>Found cheaper elsewhere</option>
-                      <option>Wrong size/color</option>
-                      <option>Other</option>
-                    </select>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={cancelOrder}
-                        className="flex-1 bg-white border border-red-600 text-red-500 py-2 rounded-lg hover:bg-red-50 font-medium"
-                      >
-                        Confirm Cancel
-                      </button>
-                      <button
-                        onClick={() => setShowCancel(false)}
-                        className="px-6 py-2 border rounded-lg hover:bg-white"
-                      >
-                        Back
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Return Order Form */}
             {showReturn && (
               <div className="mb-6 p-5 border-2 border-orange-300 rounded-xl bg-orange-50">
-                <h4 className="font-semibold text-lg mb-4 text-orange-800">
-                  Request Return
-                </h4>
-
+                <h4 className="font-semibold text-lg mb-4 text-orange-800">Request Return</h4>
+                
                 <textarea
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
@@ -872,14 +571,10 @@ export default function OrdersPage() {
                     type="file"
                     multiple
                     accept="image/*"
-                    onChange={(e) =>
-                      setReturnImages(Array.from(e.target.files))
-                    }
+                    onChange={(e) => setReturnImages(Array.from(e.target.files))}
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {returnImages.length} image(s) selected
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{returnImages.length} image(s) selected</p>
                 </div>
 
                 <div className="flex gap-3 mt-6">
@@ -903,8 +598,42 @@ export default function OrdersPage() {
               </div>
             )}
 
+            {/* Review Section */}
+            {/* {getNormalizedStatus(selectedOrder) === "delivered" && (
+                <div className="mb-6 p-5 border border-gray-200 rounded-lg bg-gray-50">
+                  <h4 className="font-medium mb-3 text-[#172554]">Rate Your Experience</h4>
+                  <div className="flex gap-2 mb-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRating(star)}
+                        className={`text-3xl transition-all hover:scale-110 ${
+                          star <= rating ? "text-yellow-500" : "text-gray-300"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={review}
+                    onChange={(e) => setReview(e.target.value)}
+                    placeholder="Share your experience... (optional)"
+                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#172554]"
+                    rows="3"
+                  />
+                  <button
+                    onClick={() => toast.success("Review feature coming soon!")}
+                    className="w-full mt-3 bg-[#172554] text-white py-3 rounded-lg hover:bg-[#1e3a8a] font-medium transition"
+                  >
+                    Submit Review
+                  </button>
+                </div>
+              )} */}
+
             {/* Action Buttons + Return Order */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-8">
+           <div className="flex flex-col sm:flex-row gap-3 mt-8">
+
               <button
                 onClick={() => downloadInvoice(selectedOrder)}
                 className="flex-1 bg-white border-2 border-[#172554] text-[#172554] py-3 rounded-lg hover:bg-[#172554] hover:text-white font-medium transition"
@@ -918,73 +647,53 @@ export default function OrdersPage() {
               >
                 Copy Invoice No
               </button>
+              {getNormalizedStatus(selectedOrder) === "pending" && (
+                <button
+                  onClick={cancelOrderByCustomer}
+                  className="flex-1 bg-white border border-red-500 text-red-500 py-3 rounded-lg hover:bg-red-50 font-medium transition shadow-md flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                  Cancel Order
+                </button>
+              )}
 
               {/* Return Order Button - Only for Delivered Orders within 7 days */}
-              {getNormalizedStatus(selectedOrder) === "delivered" &&
-                !selectedOrder.returnRequested &&
-                (() => {
-                  const deliveredDate = new Date(
-                    selectedOrder.deliveredAt ||
-                      selectedOrder.updatedAt ||
-                      selectedOrder.createdAt
-                  );
-                  const daysSinceDelivery = Math.floor(
-                    (new Date() - deliveredDate) / (1000 * 60 * 60 * 24)
-                  );
-                  return daysSinceDelivery <= 7;
-                })() && (
-                  <button
-                    onClick={() => setShowReturn(true)}
-                    className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-medium transition flex items-center justify-center gap-2 shadow-md"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                      />
-                    </svg>
-                    Return Order
-                  </button>
-                )}
+              {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
+                const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt || selectedOrder.createdAt);
+                const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
+                return daysSinceDelivery <= 7;
+              })() && (
+                <button
+                  onClick={() => setShowReturn(true)}
+                  className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-medium transition flex items-center justify-center gap-2 shadow-md"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Return Order
+                </button>
+              )}
 
               {/* Return Already Requested */}
               {selectedOrder.returnRequested && (
-                <div className="text-center text-green-600 font-medium bg-green-50 py-3 px-2 rounded-lg">
+                <div className="flex-1 bg-green-50 border-2 border-green-200 text-green-700 py-3 rounded-lg font-medium text-center shadow-sm">
                   Return Request Submitted
                 </div>
               )}
 
-              {/* Return Window Closed */}
-              {getNormalizedStatus(selectedOrder) === "delivered" &&
-                !selectedOrder.returnRequested &&
-                (() => {
-                  const deliveredDate = new Date(
-                    selectedOrder.deliveredAt || selectedOrder.updatedAt
-                  );
-                  const daysSinceDelivery = Math.floor(
-                    (new Date() - deliveredDate) / (1000 * 60 * 60 * 24)
-                  );
-                  return daysSinceDelivery > 7;
-                })() && (
-                  <div className="text-center text-gray-500 italic text-sm">
-                    Return window closed (
-                    {Math.floor(
-                      (new Date() -
-                        new Date(
-                          selectedOrder.deliveredAt || selectedOrder.updatedAt
-                        )) /
-                        (1000 * 60 * 60 * 24)
-                    )}{" "}
-                    days ago)
-                  </div>
-                )}
+              {/* Return Window Closed — NOW LOOKS LIKE A BUTTON (Disabled Style) */}
+              {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
+                const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt);
+                const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
+                return daysSinceDelivery > 7;
+              })() && (
+                <div className="flex-1 bg-gray-100 border-2 border-gray-300 text-gray-600 py-3 rounded-lg font-medium text-center cursor-not-allowed shadow-sm">
+                  Return period ended
+                </div>
+              )}
+
             </div>
           </div>
         </div>
@@ -992,27 +701,23 @@ export default function OrdersPage() {
 
       {showSuccessPopup && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
-          <div
+ 
+          <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-xl"
             onClick={() => setShowSuccessPopup(false)}
           />
 
-          <div
-            className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-12 text-center 
-                         animate-in fade-in zoom-in duration-500 
-                         border border-white/20"
-          >
-            <div
-              className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-green-600 
-                         rounded-full mx-auto mb-8 flex items-center justify-center 
-                         shadow-2xl animate-pulse ring-8 ring-white/30"
-            >
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-12 text-center 
+                          animate-in fade-in zoom-in duration-500 
+                          border border-white/20">
+            
+            <div className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-green-600 
+                            rounded-full mx-auto mb-8 flex items-center justify-center 
+                            shadow-2xl animate-pulse ring-8 ring-white/30">
               <CheckCircle className="w-16 h-16 text-white" />
             </div>
 
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">
-              Order Confirmed!
-            </h2>
+            <h2 className="text-5xl font-bold text-gray-900 mb-4">Order Confirmed!</h2>
             <p className="text-xl text-gray-700 mb-10 leading-relaxed">
               Thank you for shopping with Tanariry!
             </p>
@@ -1020,8 +725,8 @@ export default function OrdersPage() {
             <button
               onClick={() => setShowSuccessPopup(false)}
               className="mx-auto bg-[#172554] hover:bg-[#0f1e3d] text-white font-bold 
-                         text-xl py-3 px-8 rounded-2xl transition-all duration-300 
-                         transform hover:scale-105 shadow-xl hover:shadow-2xl"
+                          text-xl py-3 px-8 rounded-2xl transition-all duration-300 
+                          transform hover:scale-105 shadow-xl hover:shadow-2xl"
             >
               Continue Shopping
             </button>

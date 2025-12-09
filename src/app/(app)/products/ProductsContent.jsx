@@ -93,18 +93,14 @@ export default function ProductsContent() {
 
       let filtered = [...rawProducts];
 
-      // Main Category Filter
       if (selectedCategory !== "all") {
         filtered = filtered.filter(p => p.category?._id === selectedCategory);
       }
 
-      // Subcategory Filter ← NEW
+
 
 if (selectedSubCategory !== "all") {
-  filtered = filtered.filter(p => {
-    const subCatId = p.subCategory?._id || p.subCategory;
-    return subCatId === selectedSubCategory;
-  });
+  filtered = filtered.filter(p => p.subCategoryId === selectedSubCategory);
 }
 
       // Search Query

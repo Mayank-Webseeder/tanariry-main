@@ -1,4 +1,3 @@
-
 import { X, LayoutGrid, Grid3x3 } from "lucide-react";
 
 export default function FilterSidebar({
@@ -7,6 +6,8 @@ export default function FilterSidebar({
   categories,
   selectedCategory,
   setSelectedCategory,
+  selectedSubCategory,
+  setSelectedSubCategory,
   setActiveCat,
   minPrice,
   setMinPrice,
@@ -18,15 +19,19 @@ export default function FilterSidebar({
   setViewMode,
   onApplyFilters,
 }) {
- 
   const handleReset = () => {
     setSelectedCategory("all");
+    setSelectedSubCategory("all");
     setActiveCat(null);
     setMinPrice("");
     setMaxPrice("");
     setSortBy("default");
     setViewMode("grid3");
   };
+
+  // Find current category's subcategories
+  const currentCategory = categories.find(cat => cat._id === selectedCategory);
+  const subcategories = currentCategory?.subCategories || [];
 
   return (
     <>
@@ -38,7 +43,7 @@ export default function FilterSidebar({
         onClick={onClose}
       />
 
-      {/* Sidebar - Only left corners rounded */}
+      {/* Sidebar */}
       <div
         className={`fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform transition-transform duration-500 ease-out rounded-l-3xl overflow-hidden ${
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -47,10 +52,7 @@ export default function FilterSidebar({
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-[#172554]/10 px-6 py-5 flex items-center justify-between">
           <h3 className="text-2xl font-playfair text-[#172554] font-semibold">Filters</h3>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
             <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
@@ -68,6 +70,7 @@ export default function FilterSidebar({
                   checked={selectedCategory === "all"}
                   onChange={() => {
                     setSelectedCategory("all");
+                    setSelectedSubCategory("all");
                     setActiveCat(null);
                   }}
                   className="w-5 h-5 text-[#172554] focus:ring-[#172554] rounded-full"
@@ -82,6 +85,7 @@ export default function FilterSidebar({
                     checked={selectedCategory === cat._id}
                     onChange={() => {
                       setSelectedCategory(cat._id);
+                      setSelectedSubCategory("all"); // Reset subcategory when category changes
                       setActiveCat(cat);
                     }}
                     className="w-5 h-5 text-[#172554] focus:ring-[#172554] rounded-full"
@@ -91,6 +95,25 @@ export default function FilterSidebar({
               ))}
             </div>
           </div>
+
+          {/* SUBCATEGORY DROPDOWN — YEH ADD KIYA HAI! */}
+          {selectedCategory !== "all" && subcategories.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold text-[#172554] mb-5">Subcategory</h4>
+              <select
+                value={selectedSubCategory}
+                onChange={(e) => setSelectedSubCategory(e.target.value)}
+                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#172554] focus:ring-4 focus:ring-[#172554]/10 outline-none transition"
+              >
+                <option value="all">All Subcategories</option>
+                {subcategories.map((sub) => (
+                  <option key={sub._id} value={sub._id}>
+                    {sub.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Price Range */}
           <div>
@@ -159,7 +182,7 @@ export default function FilterSidebar({
           </div>
         </div>
 
-        {/* Bottom Action Buttons - Reset + Apply */}
+        {/* Bottom Buttons */}
         <div className="sticky bottom-0 bg-white border-t border-[#172554]/10 px-6 py-5">
           <div className="flex gap-3">
             <button
