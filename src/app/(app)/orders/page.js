@@ -27,14 +27,12 @@ export default function OrdersPage() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImages, setReturnImages] = useState([]);
 
-  // Delhivery tracking state
   const [tracking, setTracking] = useState({
     loading: false,
     events: [],
     error: null,
   });
 
-  // Return Order Request
   const requestReturn = async () => {
     if (!returnReason) return toast.error("Please write a reason");
     if (returnImages.length === 0)
@@ -44,7 +42,7 @@ export default function OrdersPage() {
     const formData = new FormData();
 
     formData.append("reason", returnReason);
-    formData.append("reasonCategory", "damaged"); // या dynamic कर सकते हो
+    formData.append("reasonCategory", "damaged"); 
 
     returnImages.forEach((image) => {
       formData.append("images", image);
@@ -179,8 +177,6 @@ export default function OrdersPage() {
 
       const data = await res.json();
 
-      // Normalize: adjust to match your backend response
-      // Example if you map Delhivery "ScanDetail" list to `events`
       const events = data?.events || data?.tracking || data?.data || [];
 
       setTracking({ loading: false, events, error: null });
@@ -207,7 +203,6 @@ export default function OrdersPage() {
     setReturnImages([]);
     setTracking({ loading: false, events: [], error: null });
 
-    // Detect waybill from order
     const waybill =
       order.waybill ||
       order.awb ||
