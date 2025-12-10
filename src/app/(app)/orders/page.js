@@ -267,7 +267,7 @@ const cancelOrderByCustomer = async () => {
   try {
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/cancel-by-customer`, {
-      method: "PATCH",
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
