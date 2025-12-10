@@ -27,13 +27,19 @@ export default function OrdersPage() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImages, setReturnImages] = useState([]);
 
-  const formatPrice = (amountInPaise) => {
+const formatPrice = (amountInPaise) => {
   const rupees = Number(amountInPaise || 0) / 100;
   return rupees.toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,   
     maximumFractionDigits: 2
   });
 };
+
+const [tracking, setTracking] = useState({
+  loading: false,
+  events: [],
+  error: null,
+});
 
   // Return Order Request
 const requestReturn = async () => {
@@ -150,6 +156,40 @@ const statusSteps = [
     fetchOrders();
   }, [authLoading, user]);
 
+  // Fetch Delhivery tracking from your backend
+  const fetchTracking = async (waybill) => {
+    if (!waybill) {
+      setTracking({ loading: false, events: [], error: null });
+      return;
+    }
+
+    try {
+      setTracking((prev) => ({ ...prev, loading: true, error: null }));
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`/api/shipping/track/${waybill}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch tracking");
+
+      const data = await res.json();
+
+      const events = data?.events || data?.tracking || data?.data || [];
+
+      setTracking({ loading: false, events, error: null });
+    } catch (err) {
+      console.error(err);
+      setTracking({
+        loading: false,
+        events: [],
+        error: "Unable to load tracking",
+      });
+    }
+  };
+
   const openModal = (order) => {
     if (!order) return toast.error("Order data missing");
     setSelectedOrder(order);
@@ -158,6 +198,20 @@ const statusSteps = [
     setCancelReason("");
     setRating(0);
     setReview("");
+    setShowReturn(false);
+    setReturnReason("");
+    setReturnImages([]);
+    setTracking({ loading: false, events: [], error: null });
+
+    const waybill =
+      order.waybill ||
+      order.awb ||
+      order.trackingId ||
+      order.shipmentDetails?.waybill;
+
+    if (waybill) {
+      fetchTracking(waybill);
+    }
   };
 
   const closeModal = () => {

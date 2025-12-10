@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 // import WishlistSidebar from './WishlistSidebar';
 import { useAuth } from '@/context/AuthContext';
+import OrderNotifications from '../OrderNotifications';
 
 export default function Header() {
   const { isLoggedIn, loading: authLoading } = useAuth();
@@ -219,6 +220,8 @@ export default function Header() {
                 />
               </form>
             </div> */}
+
+            <OrderNotifications />
 
             {/* === Profile === */}
             <ProfileDropdown />
