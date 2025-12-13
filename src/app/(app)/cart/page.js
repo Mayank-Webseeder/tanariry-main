@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -12,6 +12,7 @@ import {
   Package,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import StayInspired from "@/components/home/StayInspired";
 import toast from "react-hot-toast";
 
@@ -24,8 +25,7 @@ const getImageUrl = (path) => {
   return `${BACKEND_URL}/uploads/${path}`;
 };
 
-
-const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
+const CartItem = ({ item, updateQuantity, removeFromCart, getPrice, currencySymbol }) => {
   const rawImage = item.productImages?.[0] || item.image;
   const [imgSrc, setImgSrc] = useState(getImageUrl(rawImage));
 
@@ -63,12 +63,9 @@ const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
             </p>
           )}
           <div className="flex items-center gap-3 mt-3">
-            <span className="text-lg font-bold text-[#172554]">₹{price}</span>
-            {item.discountPrice && (
-              <span className="text-sm text-gray-500 line-through">
-                ₹{item.price}
-              </span>
-            )}
+            <span className="text-lg font-bold text-[#172554]">
+              {currencySymbol}{price}
+            </span>
           </div>
         </div>
       </div>
@@ -105,7 +102,9 @@ const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
           </button>
         </div>
         <div className="text-right">
-          <p className="font-bold text-[#172554] text-xl">₹{price * qty}</p>
+          <p className="font-bold text-[#172554] text-xl">
+            {currencySymbol}{(price * qty)}
+          </p>
         </div>
       </div>
     </div>
@@ -114,11 +113,35 @@ const CartItem = ({ item, updateQuantity, removeFromCart, getPrice }) => {
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, cartCount } = useCart();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  const [isIndia, setIsIndia] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.country.is/')
+      .then(res => res.json())
+      .then(data => {
+        const countryCode = data?.country || 'IN';
+        setIsIndia(countryCode === 'IN');
+      })
+      .catch(() => {
+        setIsIndia(true); // fallback India
+      });
+  }, []);
+
+  const currencySymbol = isIndia ? '₹' : '$';
+
+  const getPrice = (item) => {
+    return isIndia
+      ? Number(item.discountPrice || item.price || 0)
+      : Number(item.discountPriceUSD || item.priceUSD || 0);
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
   useEffect(() => {
     if (cart.length === 0) {
       const justOrdered = sessionStorage.getItem("justPlacedOrder");
@@ -128,8 +151,6 @@ export default function CartPage() {
       }
     }
   }, [cart]);
-
-  const getPrice = (item) => Number(item.discountPrice || item.price || 0);
 
   const subtotal = mounted
     ? cart.reduce((sum, item) => sum + getPrice(item) * (item.quantity || 1), 0)
@@ -170,8 +191,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 lg:py-12">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 ">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-12">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-4xl md:text-5xl font-playfair text-[#172554] font-normal">
@@ -190,6 +211,7 @@ export default function CartPage() {
                 updateQuantity={updateQuantity}
                 removeFromCart={removeFromCart}
                 getPrice={getPrice}
+                currencySymbol={currencySymbol}
               />
             ))}
           </div>
@@ -203,15 +225,15 @@ export default function CartPage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal ({cartCount} items)</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>{currencySymbol}{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Tax (5%)</span>
-                  <span>₹{tax.toFixed(2)}</span>
+                  <span>{currencySymbol}{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg text-[#172554] pt-3 border-t">
                   <span>Total Amount</span>
-                  <span>₹{total.toFixed(2)}</span>
+                  <span>{currencySymbol}{total.toFixed(2)}</span>
                 </div>
               </div>
               <Link

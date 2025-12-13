@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
+import { useState, useEffect } from "react";
 import { X, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
+import toast from "react-hot-toast";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Helper: Get correct image URL
 const getImageUrl = (path) => {
   if (!path) return "/fallback.jpg";
   if (path.startsWith("http")) return path;
@@ -16,8 +16,8 @@ const getImageUrl = (path) => {
   return `${BACKEND_URL}/uploads/${path}`;
 };
 
-// Cart Item Component (unchanged logic)
-function CartItem({ item, removeFromCart, updateQuantity, getTotal }) {
+// Cart Item Component
+function CartItem({ item, removeFromCart, updateQuantity, getTotal, currencySymbol }) {
   const rawImage = item.productImages?.[0] || item.image;
   const [imgSrc, setImgSrc] = useState(getImageUrl(rawImage));
 
@@ -26,7 +26,12 @@ function CartItem({ item, removeFromCart, updateQuantity, getTotal }) {
   }, [rawImage]);
 
   const safeName = item.productName || item.name || "Product";
+  const qty = item.quantity || 1;
   const itemTotal = getTotal(item);
+
+  const formattedTotal = currencySymbol === '$'
+    ? Number(itemTotal).toFixed(2).replace(/\.00$/, '')
+    : Number(itemTotal).toFixed(2);
 
   return (
     <div className="flex gap-4 py-3 border-b border-gray-100 last:border-0">
@@ -71,7 +76,7 @@ function CartItem({ item, removeFromCart, updateQuantity, getTotal }) {
             </button>
           </div>
           <span className="font-semibold text-[#172554]">
-            ₹{itemTotal}
+            {currencySymbol}{formattedTotal}
           </span>
         </div>
       </div>
@@ -81,9 +86,24 @@ function CartItem({ item, removeFromCart, updateQuantity, getTotal }) {
 
 export default function CartSidebar({ isOpen, onClose }) {
   const { cart, updateQuantity, removeFromCart, cartCount, justRemoved } = useCart();
-
   const [mounted, setMounted] = useState(false);
   const [visibleCart, setVisibleCart] = useState([]);
+
+  const [isIndia, setIsIndia] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.country.is/')
+      .then(res => res.json())
+      .then(data => {
+        const countryCode = data?.country || 'IN';
+        setIsIndia(countryCode === 'IN');
+      })
+      .catch(() => {
+        setIsIndia(true); // fallback India
+      });
+  }, []);
+
+  const currencySymbol = isIndia ? '₹' : '$';
 
   useEffect(() => {
     setMounted(true);
@@ -102,14 +122,17 @@ export default function CartSidebar({ isOpen, onClose }) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Safe price helpers
-  const getPrice = (item) => Number(item.discountPrice || item.price || 0);
+  const getPrice = (item) => {
+    return isIndia
+      ? Number(item.discountPrice || item.price || 0)
+      : Number(item.discountPriceUSD || item.priceUSD || 0);
+  };
+
   const getTotal = (item) => (getPrice(item) * (item.quantity || 1)).toFixed(2);
 
   const subtotal = visibleCart.reduce((sum, item) => sum + getPrice(item) * (item.quantity || 1), 0);
   const isEmpty = visibleCart.length === 0;
 
-  // Auto-close when cart becomes empty after removal
   useEffect(() => {
     if (justRemoved && isEmpty && isOpen) {
       const timer = setTimeout(() => onClose(), 500);
@@ -121,15 +144,15 @@ export default function CartSidebar({ isOpen, onClose }) {
     <>
       {/* Smooth Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50  z-40 transition-all duration-500 ease-out ${
+        className={`fixed inset-0 bg-black/50 z-40 transition-all duration-500 ease-out ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
         onClick={onClose}
       />
 
-      {/* Sidebar with Smooth Slide + Rounded Left */}
+      {/* Sidebar */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transform transition-all duration-500 ease-out ${
+        className={`fixed right-0 top-0 h-full w-full max-w-md bg-[#f5f3f0] shadow-2xl z-50 flex flex-col transform transition-all duration-500 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         } rounded-l-3xl overflow-hidden`}
       >
@@ -146,13 +169,13 @@ export default function CartSidebar({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Body - Scrollable */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {mounted ? (
             isEmpty ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div className="w-28 h-28 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                  <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+                  <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                       d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                     />
@@ -179,6 +202,7 @@ export default function CartSidebar({ isOpen, onClose }) {
                     removeFromCart={removeFromCart}
                     updateQuantity={updateQuantity}
                     getTotal={getTotal}
+                    currencySymbol={currencySymbol}
                   />
                 ))}
               </div>
@@ -204,7 +228,7 @@ export default function CartSidebar({ isOpen, onClose }) {
             <div className="mb-4">
               <div className="flex justify-between text-lg font-semibold text-[#172554]">
                 <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+                <span>{currencySymbol}{subtotal.toFixed(2).replace(/\.00$/, '')}</span>
               </div>
               <p className="text-xs text-gray-500 text-center mt-2">
                 Shipping & taxes calculated at checkout

@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { CheckCircle } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-const IMG_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL
+const IMG_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -27,69 +27,79 @@ export default function OrdersPage() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImages, setReturnImages] = useState([]);
 
-const formatPrice = (amountInPaise) => {
-  const rupees = Number(amountInPaise || 0) / 100;
-  return rupees.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,   
-    maximumFractionDigits: 2
-  });
-};
-
-const [tracking, setTracking] = useState({
-  loading: false,
-  events: [],
-  error: null,
-});
-
-  // Return Order Request
-const requestReturn = async () => {
-  if (!returnReason) return toast.error("Please write a reason");
-  if (returnImages.length === 0) return toast.error("Please upload at least one image");
-
-  const token = localStorage.getItem("token");
-  const formData = new FormData();
-
-  formData.append("reason", returnReason);
-  formData.append("reasonCategory", "damaged");
-
-  returnImages.forEach((image) => {
-    formData.append("images", image);
+  const [tracking, setTracking] = useState({
+    loading: false,
+    events: [],
+    error: null,
   });
 
-  try {
-    const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/return-request`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
+  // Country detection
+  const [isIndia, setIsIndia] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.country.is/')
+      .then(res => res.json())
+      .then(data => {
+        const countryCode = data?.country || 'IN';
+        setIsIndia(countryCode === 'IN');
+      })
+      .catch(() => setIsIndia(true));
+  }, []);
+
+  const currencySymbol = isIndia ? '₹' : '$';
+
+  const formatPrice = (amount) => {
+    const value = Number(amount || 0) / 100;
+    return value.toLocaleString(isIndia ? 'en-IN' : 'en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
+  };
 
-    if (res.ok) {
-      toast.success("Return request submitted successfully!");
-      setShowReturn(false);
-      setReturnReason("");
-      setReturnImages([]);
-      
-      setSelectedOrder({ ...selectedOrder, returnRequested: true });
-    } else {
-      const error = await res.json();
-      toast.error(error.message || "Failed to submit return request");
+  // Return request
+  const requestReturn = async () => {
+    if (!returnReason) return toast.error("Please write a reason");
+    if (returnImages.length === 0) return toast.error("Upload at least one image");
+
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+
+    formData.append("reason", returnReason);
+    formData.append("reasonCategory", "damaged");
+
+    returnImages.forEach((image) => formData.append("images", image));
+
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/return-request`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        toast.success("Return request submitted!");
+        setShowReturn(false);
+        setReturnReason("");
+        setReturnImages([]);
+        setSelectedOrder({ ...selectedOrder, returnRequested: true });
+      } else {
+        const error = await res.json();
+        toast.error(error.message || "Failed to submit return request");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error");
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("Network error");
-  }
-};
+  };
 
   const getNormalizedStatus = (order) => {
-  return (
-    order?.orderStatus ||
-    order?.status ||
-    order?.paymentStatus ||
-    "Pending"
-  ).toLowerCase();
-};
+    return (
+      order?.orderStatus ||
+      order?.status ||
+      order?.paymentStatus ||
+      "Pending"
+    ).toLowerCase();
+  };
 
   useEffect(() => {
     const justPlaced = sessionStorage.getItem("justPlacedOrder");
@@ -101,14 +111,13 @@ const requestReturn = async () => {
     }
   }, []);
 
-const statusSteps = [
-  { status: "pending",    label: "Order Placed" },
-  { status: "processing", label: "Preparing" },
-  { status: "shipped",    label: "On the Way" },
-  { status: "delivered",  label: "Delivered" },
-];
+  const statusSteps = [
+    { status: "pending", label: "Order Placed" },
+    { status: "processing", label: "Preparing" },
+    { status: "shipped", label: "On the Way" },
+    { status: "delivered", label: "Delivered" },
+  ];
 
-  // Fetch all orders for the logged-in user
   const fetchOrders = async () => {
     if (!user) {
       setLoading(false);
@@ -156,7 +165,6 @@ const statusSteps = [
     fetchOrders();
   }, [authLoading, user]);
 
-  // Fetch Delhivery tracking from your backend
   const fetchTracking = async (waybill) => {
     if (!waybill) {
       setTracking({ loading: false, events: [], error: null });
@@ -168,25 +176,18 @@ const statusSteps = [
       const token = localStorage.getItem("token");
 
       const res = await fetch(`/api/shipping/track/${waybill}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Failed to fetch tracking");
 
       const data = await res.json();
-
       const events = data?.events || data?.tracking || data?.data || [];
 
       setTracking({ loading: false, events, error: null });
     } catch (err) {
       console.error(err);
-      setTracking({
-        loading: false,
-        events: [],
-        error: "Unable to load tracking",
-      });
+      setTracking({ loading: false, events: [], error: "Unable to load tracking" });
     }
   };
 
@@ -203,15 +204,8 @@ const statusSteps = [
     setReturnImages([]);
     setTracking({ loading: false, events: [], error: null });
 
-    const waybill =
-      order.waybill ||
-      order.awb ||
-      order.trackingId ||
-      order.shipmentDetails?.waybill;
-
-    if (waybill) {
-      fetchTracking(waybill);
-    }
+    const waybill = order.waybill || order.awb || order.trackingId || order.shipmentDetails?.waybill;
+    if (waybill) fetchTracking(waybill);
   };
 
   const closeModal = () => {
@@ -219,17 +213,12 @@ const statusSteps = [
     setSelectedOrder(null);
   };
 
-  // Download invoice as PDF
   const downloadInvoice = async (order) => {
     const orderId = order._id?.toString() || order.id;
-    if (!orderId) {
-      toast.error("Order ID not found");
-      return;
-    }
+    if (!orderId) return toast.error("Order ID not found");
 
     try {
       const token = localStorage.getItem("token");
-
       const response = await fetch(`${API_BASE}/api/orders/${orderId}/invoice`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
@@ -247,52 +236,48 @@ const statusSteps = [
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("Invoice downloaded successfully!");
+      toast.success("Invoice downloaded!");
     } catch (error) {
       console.error("Invoice download failed:", error);
       toast.error("Failed to download invoice");
     }
   };
 
-const cancelOrderByCustomer = async () => {
-  if (!selectedOrder) return toast.error("Order not found");
+  const cancelOrderByCustomer = async () => {
+    if (!selectedOrder) return toast.error("Order not found");
 
-  if (getNormalizedStatus(selectedOrder) !== "pending") {
-    return toast.error("Only pending orders can be cancelled");
-  }
-
-  const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
-  if (!confirmCancel) return;
-
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/cancel-by-customer`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const result = await res.json();
-
-    if (res.ok) {
-      toast.success("Order cancelled successfully!");
-
-      setOrders(prev => prev.map(o =>
-        o._id === selectedOrder._id ? { ...o, orderStatus: "Cancelled" } : o
-      ));
-      setSelectedOrder({ ...selectedOrder, orderStatus: "Cancelled" });
-      setShowCancel(false);
-      closeModal();
-    } else {
-      toast.error(result.message || "Failed to cancel order");
+    if (getNormalizedStatus(selectedOrder) !== "pending") {
+      return toast.error("Only pending orders can be cancelled");
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("Network error");
-  }
-};
+
+    const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
+    if (!confirmCancel) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/orders/${selectedOrder._id}/cancel-by-customer`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        toast.success("Order cancelled successfully!");
+        setOrders(prev => prev.map(o =>
+          o._id === selectedOrder._id ? { ...o, orderStatus: "Cancelled" } : o
+        ));
+        setSelectedOrder({ ...selectedOrder, orderStatus: "Cancelled" });
+        setShowCancel(false);
+        closeModal();
+      } else {
+        toast.error(result.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error");
+    }
+  };
 
   const copyInvoiceNo = () => {
     const invoiceNo =
@@ -305,12 +290,10 @@ const cancelOrderByCustomer = async () => {
     toast.success("Invoice number copied!");
   };
 
+  const currentIndex = statusSteps.findIndex(
+    (step) => step.status === getNormalizedStatus(selectedOrder)
+  );
 
-const currentIndex = statusSteps.findIndex(
-  (step) => step.status === getNormalizedStatus(selectedOrder)
-);
-
-  // Skeleton loader
   const SkeletonRow = () => (
     <div className="animate-pulse space-y-4 pb-6 border-b border-gray-200">
       <div className="grid grid-cols-3 gap-4 md:gap-8">
@@ -329,7 +312,6 @@ const currentIndex = statusSteps.findIndex(
     </div>
   );
 
-  // Empty state UI
   const EmptyOrdersUI = () => (
     <div className="text-center py-16 px-6">
       <div className="max-w-md mx-auto">
@@ -406,14 +388,14 @@ const currentIndex = statusSteps.findIndex(
                                 ? "border-blue-600 text-blue-600 bg-blue-50"
                                 : getNormalizedStatus(order) === "processing"
                                 ? "border-purple-600 text-purple-600 bg-purple-50"
-                                : "border-[#172554] text-[#172554] bg-[#172554]/5" 
+                                : "border-[#172554] text-[#172554] bg-[#172554]/5"
                             }`}
                           >
                             {getNormalizedStatus(order) === "delivered" ? "Delivered" :
-                            getNormalizedStatus(order) === "cancelled" ? "Cancelled" :
-                            getNormalizedStatus(order) === "shipped" ? "Shipped" :
-                            getNormalizedStatus(order) === "processing" ? "Processing" :
-                            "Order Placed"}
+                             getNormalizedStatus(order) === "cancelled" ? "Cancelled" :
+                             getNormalizedStatus(order) === "shipped" ? "Shipped" :
+                             getNormalizedStatus(order) === "processing" ? "Processing" :
+                             "Order Placed"}
                           </span>
                         </div>
                       </div>
@@ -426,10 +408,7 @@ const currentIndex = statusSteps.findIndex(
                         <div>
                           <span className="text-gray-600">Total: </span>
                           <span className="font-medium">
-                            ₹{Number(order.paymentTotal || order.totalAmount || 0 / 100).toLocaleString('en-IN', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
+                            {currencySymbol}{formatPrice(order.paymentTotal || order.totalAmount || 0)}
                           </span>
                         </div>
                       </div>
@@ -454,7 +433,7 @@ const currentIndex = statusSteps.findIndex(
       {/* Order Details Modal */}
       {isModalOpen && selectedOrder && (
         <div
-          className="fixed inset-0 bg-black/40  flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
           onClick={closeModal}
         >
           <div
@@ -496,7 +475,7 @@ const currentIndex = statusSteps.findIndex(
               </div>
             </div>
 
-            {/* Products List - FULLY FIXED */}
+            {/* Products List */}
             <div className="border-t pt-6 mb-6">
               <h4 className="font-semibold text-lg mb-4 text-[#172554]">Products</h4>
 
@@ -515,34 +494,31 @@ const currentIndex = statusSteps.findIndex(
                 return (
                   <div className="space-y-4">
                     {items.map((item, index) => {
-                      const product = item.productId || item.product || item;
-                      const name = product?.productName || product?.title || "Product Name";
+                      const price = isIndia
+                        ? Number(item.price || 0) 
+                        : Number(item.priceUSD || item.price || 0); 
 
-                      const rawImage = product?.productImages?.[0] || product?.images?.[0];
-                      const cleanImage = rawImage?.replace(/^uploads\//, "").replace(/^\/+/, "");
-                      const imageUrl = cleanImage ? `${IMG_URL}/${cleanImage}` : "/fallback.jpg";
+                      const qty = Number(item.quantity || 1);
+                      const total = price * qty;
 
-                      const priceInRupees = (Number(item.price || product?.discountPrice || product?.price || 0) / 100);
-                      const qty = Number(item.quantity || item.qty || 1);
-                      const totalInRupees = priceInRupees * qty;
+                      const name = item.name || item.productName || "Product Name";
+                      const rawImage = item.productImages?.[0] || "/fallback.jpg";
+                      const imageUrl = rawImage.startsWith("http") 
+                        ? rawImage 
+                        : `${IMG_URL}/${rawImage.replace(/^uploads\//, "")}`;
 
                       return (
-                        <div
-                          key={item._id || index}
-                          className="flex gap-4 pb-4 border-b border-gray-100 last:border-0"
-                        >
+                        <div key={item._id || index} className="flex gap-4 pb-4 border-b border-gray-100 last:border-0">
                           <div className="flex-1">
                             <h5 className="font-medium text-gray-900">{name}</h5>
-                            {item.size && <p className="text-xs text-gray-500 mt-1">Size: {item.size}</p>}
-                            {item.color && <p className="text-xs text-gray-500">Color: {item.color}</p>}
                             <p className="text-sm text-gray-600 mt-1">
-                              {qty} × ₹{priceInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {qty} × {currencySymbol}{formatPrice(price)}
                             </p>
                           </div>
 
                           <div className="text-right">
                             <p className="font-bold text-xl text-[#172554]">
-                              ₹{totalInRupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {currencySymbol}{formatPrice(total)}
                             </p>
                           </div>
                         </div>
@@ -557,15 +533,15 @@ const currentIndex = statusSteps.findIndex(
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>₹{(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0).toFixed(2)}</span>
+                <span>{currencySymbol}{formatPrice(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Discount</span>
-                <span className="text-green-600">-₹{(selectedOrder?.discount || 0).toFixed(2)}</span>
+                <span className="text-green-600">-{currencySymbol}{formatPrice(selectedOrder?.discount || 0)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg pt-3 border-t border-gray-300 text-[#172554]">
                 <span>Total Paid</span>
-                <span>₹{(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0).toFixed(2)}</span>
+                <span>{currencySymbol}{formatPrice(selectedOrder?.paymentTotal || selectedOrder?.totalAmount || 0)}</span>
               </div>
             </div>
 
@@ -608,7 +584,7 @@ const currentIndex = statusSteps.findIndex(
             {showReturn && (
               <div className="mb-6 p-5 border-2 border-orange-300 rounded-xl bg-orange-50">
                 <h4 className="font-semibold text-lg mb-4 text-orange-800">Request Return</h4>
-                
+
                 <textarea
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
@@ -652,42 +628,8 @@ const currentIndex = statusSteps.findIndex(
               </div>
             )}
 
-            {/* Review Section */}
-            {/* {getNormalizedStatus(selectedOrder) === "delivered" && (
-                <div className="mb-6 p-5 border border-gray-200 rounded-lg bg-gray-50">
-                  <h4 className="font-medium mb-3 text-[#172554]">Rate Your Experience</h4>
-                  <div className="flex gap-2 mb-3">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => setRating(star)}
-                        className={`text-3xl transition-all hover:scale-110 ${
-                          star <= rating ? "text-yellow-500" : "text-gray-300"
-                        }`}
-                      >
-                        ★
-                      </button>
-                    ))}
-                  </div>
-                  <textarea
-                    value={review}
-                    onChange={(e) => setReview(e.target.value)}
-                    placeholder="Share your experience... (optional)"
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#172554]"
-                    rows="3"
-                  />
-                  <button
-                    onClick={() => toast.success("Review feature coming soon!")}
-                    className="w-full mt-3 bg-[#172554] text-white py-3 rounded-lg hover:bg-[#1e3a8a] font-medium transition"
-                  >
-                    Submit Review
-                  </button>
-                </div>
-              )} */}
-
-            {/* Action Buttons + Return Order */}
-           <div className="flex flex-col sm:flex-row gap-3 mt-8">
-
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <button
                 onClick={() => downloadInvoice(selectedOrder)}
                 className="flex-1 bg-white border-2 border-[#172554] text-[#172554] py-3 rounded-lg hover:bg-[#172554] hover:text-white font-medium transition"
@@ -701,10 +643,11 @@ const currentIndex = statusSteps.findIndex(
               >
                 Copy Invoice No
               </button>
+
               {getNormalizedStatus(selectedOrder) === "pending" && (
                 <button
                   onClick={cancelOrderByCustomer}
-                  className="flex-1 bg-white border border-red-500 text-red-500 py-3 rounded-lg hover:bg-red-50 font-medium transition shadow-md flex items-center justify-center gap-2"
+                  className="flex-1 bg-white border border-red-500 text-red-500 py-3 rounded-lg hover:bg-red-50 font-medium transition flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 6L6 18M6 6l12 12" />
@@ -713,7 +656,6 @@ const currentIndex = statusSteps.findIndex(
                 </button>
               )}
 
-              {/* Return Order Button - Only for Delivered Orders within 7 days */}
               {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
                 const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt || selectedOrder.createdAt);
                 const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
@@ -730,14 +672,12 @@ const currentIndex = statusSteps.findIndex(
                 </button>
               )}
 
-              {/* Return Already Requested */}
               {selectedOrder.returnRequested && (
                 <div className="flex-1 bg-green-50 border-2 border-green-200 text-green-700 py-3 rounded-lg font-medium text-center shadow-sm">
                   Return Request Submitted
                 </div>
               )}
 
-              {/* Return Window Closed — NOW LOOKS LIKE A BUTTON (Disabled Style) */}
               {getNormalizedStatus(selectedOrder) === "delivered" && !selectedOrder.returnRequested && (() => {
                 const deliveredDate = new Date(selectedOrder.deliveredAt || selectedOrder.updatedAt);
                 const daysSinceDelivery = Math.floor((new Date() - deliveredDate) / (1000 * 60 * 60 * 24));
@@ -747,7 +687,6 @@ const currentIndex = statusSteps.findIndex(
                   Return period ended
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -755,8 +694,7 @@ const currentIndex = statusSteps.findIndex(
 
       {showSuccessPopup && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
- 
-          <div 
+          <div
             className="absolute inset-0 bg-black/60 backdrop-blur-xl"
             onClick={() => setShowSuccessPopup(false)}
           />
@@ -773,7 +711,7 @@ const currentIndex = statusSteps.findIndex(
 
             <h2 className="text-5xl font-bold text-gray-900 mb-4">Order Confirmed!</h2>
             <p className="text-xl text-gray-700 mb-10 leading-relaxed">
-              Thank you for shopping with Tanariry!
+              Thank you for shopping with Tanariri!
             </p>
 
             <button

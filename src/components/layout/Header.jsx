@@ -221,7 +221,7 @@ export default function Header() {
               </form>
             </div> */}
 
-            <OrderNotifications />
+            {/* <OrderNotifications /> */}
 
             {/* === Profile === */}
             <ProfileDropdown />

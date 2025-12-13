@@ -31,17 +31,27 @@ export default function Footer() {
               Handcrafted by
               <br />
               <div className="flex items-center gap-2 mt-2">
-                <img src="/logo.png" alt="TanaRiri Logo" className="w-auto h-10" />
-                <img src="/eco-icon1.png" alt="Eco Friendly" className="w-8 h-8" />
+                <img src="/logo.png" alt="TanaRiri Logo" className="w-auto h-12" />
               </div>
 
             </h1>
-            <div className="flex gap-3">
-              <Link href="#" className="text-gray-600 hover:text-[#d87f4a] transition-colors duration-200"><Instagram className="w-5 h-5" /></Link>
-              <Link href="#" className="text-gray-600 hover:text-[#d87f4a] transition-colors duration-200"><Facebook className="w-5 h-5" /></Link>
-              {/* <Link href="#" className="text-gray-600 hover:text-[#d87f4a] transition-colors duration-200"><Linkedin className="w-5 h-5" /></Link> */}
-              <Link href="#" className="text-gray-600 hover:text-[#d87f4a] transition-colors duration-200"><Youtube className="w-5 h-5" /></Link>
+           <div className="flex gap-3">
+              <Link href="#" className="text-gray-600 hover:text-[#1E3A8A] transition-colors duration-200">
+                <Instagram className="w-6 h-6" />
+              </Link>
+              <Link href="#" className="text-gray-600 hover:text-[#1E3A8A] transition-colors duration-200">
+                <Facebook className="w-6 h-6" />
+              </Link>
+              <Link href="#" className="text-gray-600 hover:text-[#1E3A8A] transition-colors duration-200">
+                <Youtube className="w-6 h-6" />
+              </Link>
             </div>
+
+            {/* Eco icon centered below */}
+            <div className="flex justify-start mt-4">
+              <img src="/eco-icon1.png" alt="Eco Friendly" className="w-8 h-8" />
+            </div>
+
           </div>
 
           {/* Collections */}
