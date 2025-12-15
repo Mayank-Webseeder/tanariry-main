@@ -31,7 +31,7 @@ export default function ProductsContent() {
   const [sortBy, setSortBy] = useState("default");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedSubCategory, setSelectedSubCategory] = useState("all"); // ← NEW
+  const [selectedSubCategory, setSelectedSubCategory] = useState("all");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +39,7 @@ export default function ProductsContent() {
   const productsPerPage = 20;
   const productsSectionRef = useRef(null);
   const categoryFromURL = searchParams.get("category");
-  const subCategoryFromURL = searchParams.get("subcategory"); // ← NEW
+  const subCategoryFromURL = searchParams.get("subcategory"); 
 
   // Fetch Categories
   useEffect(() => {

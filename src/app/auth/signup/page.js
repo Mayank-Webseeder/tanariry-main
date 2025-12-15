@@ -21,100 +21,98 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-  const { login } = useAuth(); 
+  const { login } = useAuth();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  try {
-    const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+    try {
+      const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-    // Trim all values
-    const payload = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.toLowerCase().trim(),
-      phone: phone.trim(),
-      password,
-      addresses: [{
-        address: address.trim(),
-        city: city.trim(),
-        state: state.trim(),
-        pincode: pincode.trim(),
-        country: country || "India"
-      }]
-    };
-
-    // STEP 1: SIGNUP
-    const signupRes = await fetch(`${API}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!signupRes.ok) {
-      let msg = "Signup failed";
-      if (signupRes.status === 429) {
-        msg = "Too many attempts. Please wait 1 minute and try again.";
-      } else {
-        try {
-          const err = await signupRes.json();
-          msg = err.message || msg;
-        } catch {
-          msg = await signupRes.text() || msg;
-        }
-      }
-      throw new Error(msg);
-    }
-
-    toast.success(`Namaste ${firstName}! Account created successfully!`);
-
-    // STEP 2: AUTO LOGIN (100% reliable way)
-    const loginRes = await fetch(`${API}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        emailOrPhone: email || phone,
+      const payload = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
         password,
-      }),
-    });
+        addresses: [{
+          address: address.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          pincode: pincode.trim(),
+          country: country || "India"
+        }]
+      };
 
-    if (!loginRes.ok) {
-      toast.success("Account created! Please login to continue.");
-      router.push("/auth/login");
-      return;
+      // STEP 1: SIGNUP
+      const signupRes = await fetch(`${API}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!signupRes.ok) {
+        let msg = "Signup failed";
+        if (signupRes.status === 429) {
+          msg = "Too many attempts. Please wait 1 minute and try again.";
+        } else {
+          try {
+            const err = await signupRes.json();
+            msg = err.message || msg;
+          } catch {
+            msg = await signupRes.text() || msg;
+          }
+        }
+        throw new Error(msg);
+      }
+
+      toast.success(`${firstName}! Account created successfully!`);
+
+      // STEP 2: AUTO LOGIN
+      const loginRes = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailOrPhone: email || phone,
+          password,
+        }),
+      });
+
+      if (!loginRes.ok) {
+        toast.success("Account created! Please login to continue.");
+        router.push("/auth/login");
+        return;
+      }
+
+      const loginData = await loginRes.json();
+      const token = loginData.token || loginData.data?.token;
+
+      if (!token) {
+        toast.success("Account created! Logging you in...");
+        router.push("/auth/login");
+        return;
+      }
+
+      // Save token
+      localStorage.setItem("token", token);
+
+      if (typeof login === "function") {
+        try { await login(email || phone, password); } catch {}
+      }
+
+      toast.success("Welcome back! Redirecting to home...");
+      router.push("/");
+
+    } catch (err) {
+      console.error("Signup/Login Error:", err);
+      toast.error(err.message || "Something went wrong. Please try again.");
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-
-    const loginData = await loginRes.json();
-    const token = loginData.token || loginData.data?.token;
-
-    if (!token) {
-      toast.success("Account created! Logging you in...");
-      router.push("/auth/login");
-      return;
-    }
-
-    // Save token
-    localStorage.setItem("token", token);
-
-    if (typeof login === "function") {
-      try { await login(email || phone, password); } catch {}
-    }
-
-    // FINAL SUCCESS
-    toast.success("Welcome back! Redirecting to home...");
-    router.push("/");
-
-  } catch (err) {
-    console.error("Signup/Login Error:", err);
-    toast.error(err.message || "Something went wrong. Please try again.");
-    setError(err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div
@@ -144,7 +142,6 @@ const handleSubmit = async (e) => {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
             <div>
               <label className="block text-sm font-medium mb-1">First Name <span className="text-red-500">*</span></label>
               <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black" placeholder="John" required disabled={loading} />
@@ -181,10 +178,27 @@ const handleSubmit = async (e) => {
               <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black" placeholder="Delhi" required disabled={loading} />
             </div>
 
+            {/* Country Dropdown */}
             <div>
-              <label className="block text-sm font-medium mb-1">Country</label>
-              <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black" placeholder="India" disabled />
+              <label className="block text-sm font-medium mb-1">Country <span className="text-red-500">*</span></label>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                disabled={loading}
+              >
+                <option value="India">India</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+                <option value="Germany">Germany</option>
+                <option value="France">France</option>
+                <option value="United Arab Emirates">United Arab Emirates (UAE)</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Password <span className="text-red-500">*</span></label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black" placeholder="••••••••" required disabled={loading} />

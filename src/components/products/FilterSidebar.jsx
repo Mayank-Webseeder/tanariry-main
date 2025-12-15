@@ -1,4 +1,8 @@
+'use client';
+
+import { useState, useEffect } from "react";
 import { X, LayoutGrid, Grid3x3 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function FilterSidebar({
   isOpen,
@@ -19,6 +23,25 @@ export default function FilterSidebar({
   setViewMode,
   onApplyFilters,
 }) {
+  const { user } = useAuth();
+
+  // Country detection using country.is API (team lead approved)
+  const [isIndia, setIsIndia] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.country.is/')
+      .then(res => res.json())
+      .then(data => {
+        const countryCode = data?.country || 'IN';
+        setIsIndia(countryCode === 'IN');
+      })
+      .catch(() => {
+        setIsIndia(true); // fallback India
+      });
+  }, []);
+
+  const currencySymbol = isIndia ? '₹' : '$';
+
   const handleReset = () => {
     setSelectedCategory("all");
     setSelectedSubCategory("all");
@@ -29,13 +52,34 @@ export default function FilterSidebar({
     setViewMode("grid3");
   };
 
-  // Find current category's subcategories
-  const currentCategory = categories.find(cat => cat._id === selectedCategory);
+  const currentCategory = categories.find(
+    (cat) => cat._id === selectedCategory
+  );
   const subcategories = currentCategory?.subCategories || [];
+
+const handleApplyFilters = () => {
+  let filterPayload = {};
+
+  if (isIndia) {
+    filterPayload.minPrice = minPrice ? Number(minPrice) : 0;
+    filterPayload.maxPrice = maxPrice ? Number(maxPrice) : 9999999;
+  } else {
+
+    const USD_TO_INR = 83;
+
+    filterPayload.minPrice = minPrice ? Math.round(Number(minPrice) * USD_TO_INR) : 0;
+    filterPayload.maxPrice = maxPrice ? Math.round(Number(maxPrice) * USD_TO_INR) : 9999999;
+  }
+
+  filterPayload.filterCurrency = isIndia ? "INR" : "USD";
+
+  onApplyFilters(filterPayload);
+  onClose();
+};
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Overlay */}
       <div
         className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible"
@@ -45,19 +89,24 @@ export default function FilterSidebar({
 
       {/* Sidebar */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform transition-transform duration-500 ease-out rounded-l-3xl overflow-hidden ${
+        className={`fixed right-0 top-0 h-full w-full max-w-md bg-[#f5f3f0] shadow-2xl z-50 transform transition-transform duration-500 ease-out rounded-l-3xl overflow-hidden ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-[#172554]/10 px-6 py-5 flex items-center justify-between">
-          <h3 className="text-2xl font-playfair text-[#172554] font-semibold">Filters</h3>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <h3 className="text-2xl font-playfair text-[#172554] font-semibold">
+            Filters
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
             <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
-        {/* Scrollable Content */}
+        {/* Body */}
         <div className="p-6 space-y-8 overflow-y-auto h-[calc(100vh-160px)]">
           {/* Category */}
           <div>
@@ -75,8 +124,11 @@ export default function FilterSidebar({
                   }}
                   className="w-5 h-5 text-[#172554] focus:ring-[#172554] rounded-full"
                 />
-                <span className="text-gray-700 group-hover:text-[#172554] transition">All Categories</span>
+                <span className="text-gray-700 group-hover:text-[#172554] transition">
+                  All Categories
+                </span>
               </label>
+
               {categories.map((cat) => (
                 <label key={cat._id} className="flex items-center gap-4 cursor-pointer group">
                   <input
@@ -85,18 +137,20 @@ export default function FilterSidebar({
                     checked={selectedCategory === cat._id}
                     onChange={() => {
                       setSelectedCategory(cat._id);
-                      setSelectedSubCategory("all"); // Reset subcategory when category changes
+                      setSelectedSubCategory("all");
                       setActiveCat(cat);
                     }}
                     className="w-5 h-5 text-[#172554] focus:ring-[#172554] rounded-full"
                   />
-                  <span className="text-gray-700 group-hover:text-[#172554] transition">{cat.name}</span>
+                  <span className="text-gray-700 group-hover:text-[#172554] transition">
+                    {cat.name}
+                  </span>
                 </label>
               ))}
             </div>
           </div>
 
-          {/* SUBCATEGORY DROPDOWN — YEH ADD KIYA HAI! */}
+          {/* Subcategory */}
           {selectedCategory !== "all" && subcategories.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-[#172554] mb-5">Subcategory</h4>
@@ -117,26 +171,39 @@ export default function FilterSidebar({
 
           {/* Price Range */}
           <div>
-            <h4 className="text-lg font-semibold text-[#172554] mb-5">Price Range</h4>
+            <h4 className="text-lg font-semibold text-[#172554] mb-5">
+              Price Range ({currencySymbol})
+            </h4>
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                placeholder="Min"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className="px-5 py-2 border border-gray-200 rounded-xl focus:border-[#172554] focus:ring-4 focus:ring-[#172554]/10 outline-none transition"
-              />
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="px-5 py-2 border border-gray-200 rounded-xl focus:border-[#172554] focus:ring-4 focus:ring-[#172554]/10 outline-none transition"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {currencySymbol}
+                </span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-full pl-10 pr-4 py-4 border border-gray-200 rounded-xl focus:border-[#172554] focus:ring-4 focus:ring-[#172554]/10 outline-none transition"
+                />
+              </div>
+
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {currencySymbol}
+                </span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full pl-10 pr-4 py-4 border border-gray-200 rounded-xl focus:border-[#172554] focus:ring-4 focus:ring-[#172554]/10 outline-none transition"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Sort By */}
+          {/* Sort */}
           <div>
             <h4 className="text-lg font-semibold text-[#172554] mb-5">Sort By</h4>
             <select
@@ -167,6 +234,7 @@ export default function FilterSidebar({
                 <LayoutGrid className="w-7 h-7" />
                 <span className="font-medium">3 Columns</span>
               </button>
+
               <button
                 onClick={() => setViewMode("grid3")}
                 className={`py-2 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
@@ -195,11 +263,9 @@ export default function FilterSidebar({
             >
               Reset
             </button>
+
             <button
-              onClick={() => {
-                onApplyFilters();
-                onClose();
-              }}
+              onClick={handleApplyFilters}
               className="flex-1 py-2 bg-[#172554] text-white font-semibold rounded-xl hover:bg-[#172554]/90 active:scale-95 transition-all duration-200 shadow-lg"
             >
               Apply Filters

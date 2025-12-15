@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -8,7 +8,6 @@ import { useWishlist } from '@/context/WishlistContext';
 import toast from 'react-hot-toast';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const IMAGE_URL = process.env.NEXT_PUBLIC_IMAGE_URL;
 
 export default function ProductCard({ product }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -20,6 +19,37 @@ export default function ProductCard({ product }) {
   const productId = product?._id || product?.id;
   const isWishlisted = isInWishlist(productId);
 
+  const [isIndia, setIsIndia] = useState(true); 
+
+  useEffect(() => {
+    // API call sirf client-side pe
+    fetch('https://api.country.is/')
+      .then(res => res.json())
+      .then(data => {
+        const countryCode = data?.country || 'IN';
+        setIsIndia(countryCode === 'IN');
+      })
+      .catch(() => {
+        setIsIndia(true); 
+      });
+  }, []);
+
+  const currencySymbol = isIndia ? '₹' : '$';
+
+  // Price logic
+  const displayPrice = isIndia
+    ? Number(product.discountPrice || product.price || 0)
+    : Number(product.discountPriceUSD || product.priceUSD || 0);
+
+  const displayOriginal = isIndia
+    ? Number(product.originalPrice || product.price || 0)
+    : Number(product.priceUSD || product.originalPrice || 0);
+
+  const hasDiscount = displayOriginal > displayPrice;
+  const discountPercent = hasDiscount
+    ? Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100)
+    : 0;
+
   const getImageUrl = (path) => {
     if (!path) return "/fallback.jpg";
     if (path.startsWith("http")) return path;
@@ -30,10 +60,6 @@ export default function ProductCard({ product }) {
   const mainImage = getImageUrl(product.productImages?.[0]);
   const hoverImage = getImageUrl(product.productImages?.[1]);
   const productName = product.productName || 'Unnamed Product';
-
-  const discountPrice = Number(product?.discountPrice ?? product?.originalPrice ?? 0);
-  const originalPrice = Number(product?.originalPrice ?? discountPrice);
-  const hasDiscount = originalPrice > discountPrice;
 
   const [imgSrc, setImgSrc] = useState(mainImage);
 
@@ -52,7 +78,7 @@ export default function ProductCard({ product }) {
     addToCart({
       ...product,
       quantity: 1,
-      selectedPrice: discountPrice,
+      selectedPrice: displayPrice,
     });
 
     toast.success(`${productName} added to cart!`, {
@@ -76,35 +102,18 @@ export default function ProductCard({ product }) {
       >
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 mb-3">
-
-          {/* Main Image */}
           <Image
             src={imgSrc}
             alt={productName}
             fill
-            className={`object-cover transition-all duration-500 ${isHovered ? ' scale-105' : 'opacity-100 blur-0 scale-100'
-              }`}
+            className={`object-cover transition-all duration-500 ${isHovered ? 'scale-105' : 'opacity-100 blur-0 scale-100'}`}
             onError={() => setImgSrc('/fallback.jpg')}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
 
-          {/* Hover Image (only if exists) */}
-          {/* {hoverImage && (
-            <Image
-              src={hoverImage}
-              alt={`${productName} hover`}
-              fill
-              className={`object-cover transition-opacity duration-500 absolute inset-0 ${isHovered ? 'opacity-100' : 'opacity-0'
-                }`}
-              onError={(e) => (e.currentTarget.src = '/fallback.jpg')}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-          )} */}
-
           {/* Dark overlay */}
           <div
-            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'
-              }`}
+            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
           />
 
           {/* Cart Button */}
@@ -148,16 +157,21 @@ export default function ProductCard({ product }) {
             </p>
           )}
 
+          {/* Price with Currency */}
           <p className="text-gray-700 font-medium leading-normal" style={{ fontFamily: "'Playfair Display', serif" }}>
             {hasDiscount ? (
               <>
-                <span className="text-[#1E3A8A] inline-block align-middle">₹{discountPrice.toLocaleString('en-IN')}</span>
+                <span className="text-[#1E3A8A] inline-block align-middle">
+                  {currencySymbol}{Number(displayPrice).toLocaleString(isIndia ? 'en-IN' : 'en-US')}
+                </span>
                 <span className="line-through text-gray-400 ml-2 text-sm inline-block align-middle">
-                  ₹{originalPrice.toLocaleString('en-IN')}
+                  {currencySymbol}{Number(displayOriginal).toLocaleString(isIndia ? 'en-IN' : 'en-US')}
                 </span>
               </>
             ) : (
-              <span className="inline-block align-middle">₹{discountPrice.toLocaleString('en-IN')}</span>
+              <span className="inline-block align-middle">
+                {currencySymbol}{Number(displayPrice).toLocaleString(isIndia ? 'en-IN' : 'en-US')}
+              </span>
             )}
           </p>
         </div>
