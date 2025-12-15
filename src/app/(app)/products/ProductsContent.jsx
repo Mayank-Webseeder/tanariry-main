@@ -97,11 +97,9 @@ export default function ProductsContent() {
         filtered = filtered.filter(p => p.category?._id === selectedCategory);
       }
 
-
-
-if (selectedSubCategory !== "all") {
-  filtered = filtered.filter(p => p.subCategoryId === selectedSubCategory);
-}
+      if (selectedSubCategory !== "all") {
+        filtered = filtered.filter(p => p.subCategoryId === selectedSubCategory);
+      }
 
       // Search Query
       if (searchQuery.trim()) {
@@ -146,11 +144,9 @@ if (selectedSubCategory !== "all") {
     }
   };
 
-
   useEffect(() => {
     fetchProducts();
   }, [selectedCategory, selectedSubCategory, searchQuery, sortBy, minPrice, maxPrice]);
-
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -185,6 +181,27 @@ if (selectedSubCategory !== "all") {
     fetchProducts();
     setIsFilterOpen(false);
   };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSelectedCategory("all");
+    setSelectedSubCategory("all");
+    setSearchQuery("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSortBy("default");
+    setActiveCat(null);
+    setCurrentPage(1);
+    router.replace("/products", { scroll: false });
+  };
+
+  // Check if any filter is active
+  const isAnyFilterActive = selectedCategory !== "all" ||
+    selectedSubCategory !== "all" ||
+    searchQuery.trim() !== "" ||
+    minPrice !== "" ||
+    maxPrice !== "" ||
+    sortBy !== "default";
 
   return (
     <div className="relative">
@@ -227,14 +244,26 @@ if (selectedSubCategory !== "all") {
             </div>
           </div>
 
-          {/* Desktop Filter Button */}
-          <button
-            onClick={() => setIsFilterOpen(true)}
-            className="hidden lg:flex items-center gap-3 px-6 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
-          >
-            <Filter className="w-5 h-5" />
-            Filters
-          </button>
+          {/* Desktop Filters + Reset Button */}
+          <div className="hidden lg:flex items-center gap-4">
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="flex items-center gap-3 px-6 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
+            >
+              <Filter className="w-5 h-5" />
+              Filters
+            </button>
+
+            {/* Reset Button - Only show when filters active */}
+            {isAnyFilterActive && (
+              <button
+                onClick={resetFilters}
+                className="flex items-center gap-3 px-3 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Product Grid */}
@@ -271,16 +300,28 @@ if (selectedSubCategory !== "all") {
 
       {/* Mobile Filter Button */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
-        <button
-          onClick={() => setIsFilterOpen(true)}
-          className="w-full flex items-center justify-center gap-3 py-2 bg-white text-[#172554] font-medium rounded-lg border border-pink-300 transition shadow-lg"
-        >
-          <Filter className="w-5 h-5" />
-          Filters
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className="flex-1 flex items-center justify-center gap-3 py-2 bg-white text-[#172554] font-medium rounded-lg border border-pink-300 transition shadow-lg"
+          >
+            <Filter className="w-5 h-5" />
+            Filters
+          </button>
+
+          {/* Mobile Reset Button */}
+          {isAnyFilterActive && (
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-3 px-6 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Filter Sidebar - Pass new props */}
+      {/* Filter Sidebar */}
       <FilterSidebar
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
