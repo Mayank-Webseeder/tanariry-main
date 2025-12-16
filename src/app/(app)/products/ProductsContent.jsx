@@ -205,8 +205,11 @@ export default function ProductsContent() {
 
   return (
     <div className="relative">
-      <div className="py-8 px-4 ">
-        <OccasionCards clickable={true} />
+      <div className="py-2 px-4 ">
+        <OccasionCards 
+          clickable={true}
+          onAllProductsClick={resetFilters}
+        />
       </div>
 
       {/* Main Content */}
@@ -248,7 +251,7 @@ export default function ProductsContent() {
           <div className="hidden lg:flex items-center gap-4">
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="flex items-center gap-3 px-6 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
+              className="flex items-center gap-3 px-4 py-2 border border-gray-500 rounded-lg font-medium text-[#172554] hover:bg-gray-50 transition"
             >
               <Filter className="w-5 h-5" />
               Filters
