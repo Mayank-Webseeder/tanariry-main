@@ -266,7 +266,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Right Card - Exact size as in your screenshot, no extra height */}
            <div className="bg-gradient-to-br from-[#1E3A8A] to-[#172554] rounded-2xl shadow-xl p-8 lg:p-10 text-white
                 w-full lg:w-96 flex flex-col justify-between
                 flex-shrink-0 self-start
@@ -298,7 +297,6 @@ export default function ProfilePage() {
                   className="w-full bg-white text-[#1E3A8A] font-bold py-4 rounded-xl hover:bg-gray-100 transition transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed">
                   {passLoading ? "Updating Password..." : "Update Password"}
                 </button>
-
                 <p className="text-center text-white/70 text-sm mt-4">
                   Leave blank if you don't want to change
                 </p>
@@ -307,7 +305,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-
       <StayInspired />
     </>
   );
