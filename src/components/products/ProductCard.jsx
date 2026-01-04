@@ -22,7 +22,6 @@ export default function ProductCard({ product }) {
   const [isIndia, setIsIndia] = useState(true); 
 
   useEffect(() => {
-    // API call sirf client-side pe
     fetch('https://api.country.is/')
       .then(res => res.json())
       .then(data => {

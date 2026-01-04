@@ -49,7 +49,7 @@ export default function OrdersPage() {
   const currencySymbol = isIndia ? '₹' : '$';
 
   const formatPrice = (amount) => {
-    const value = Number(amount || 0) / 100;
+    const value = Number(amount || 0);
     return value.toLocaleString(isIndia ? 'en-IN' : 'en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -499,7 +499,7 @@ export default function OrdersPage() {
                         : Number(item.priceUSD || item.price || 0); 
 
                       const qty = Number(item.quantity || 1);
-                      const total = price * qty;
+                      const total = (price * qty)/100;
 
                       const name = item.name || item.productName || "Product Name";
                       const rawImage = item.productImages?.[0] || "/fallback.jpg";

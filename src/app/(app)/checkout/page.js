@@ -31,7 +31,7 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const router = useRouter();
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("online");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [formData, setFormData] = useState({
     shippingAddress: "",
@@ -47,7 +47,7 @@ export default function CheckoutPage() {
         setIsIndia(countryCode === 'IN');
       })
       .catch(() => {
-        setIsIndia(true); // fallback India
+        setIsIndia(true);
       });
   }, []);
 
@@ -134,7 +134,7 @@ export default function CheckoutPage() {
             subtotal: priceInPaise * quantity,
           };
         }),
-        totalAmount: Math.round(total * 100),
+        totalAmount: Math.round(total),
         shippingAddress: {
           address: shippingAddr.address,
           city: shippingAddr.city,
@@ -142,6 +142,7 @@ export default function CheckoutPage() {
           pincode: shippingAddr.pincode,
           country: shippingAddr.country || "India",
         },
+        // paymentMethod: paymentMethod,
       };
 
       if (paymentMethod === "cod") {
