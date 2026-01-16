@@ -118,8 +118,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Updated props: added onAllProductsClick
-export function OccasionCards({ clickable = false, onAllProductsClick }) {
+const toSlug = (text) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+export function OccasionCards({ 
+  clickable = false, 
+  onSubcategoryClick, 
+  onAllProductsClick 
+}) {
   const router = useRouter();
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -142,7 +153,7 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
 
         setSubcategories(allSubs);
       } catch (err) {
-        console.error("Subcategories load nahi hui:", err);
+        console.error("Subcategories load error:", err);
       } finally {
         setLoading(false);
       }
@@ -172,15 +183,22 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
     };
   }, [loading, subcategories]);
 
-  const handleSubClick = (subcategoryId) => {
-    if (!clickable || loading) return;
-    router.push(`/products?subcategory=${subcategoryId}`);
-  };
+const handleSubClick = (subcategory) => {
+  if (!clickable || loading) return;
+  const slug = toSlug(subcategory.name);
 
-  // FIXED: Now resets filters via parent callback before navigating
+  if (onSubcategoryClick) {
+    onSubcategoryClick(subcategory._id); // ProductsContent filters by ID
+  }
+
+  router.push(`/products?subcategory=${slug}`, { scroll: false });
+};
+
+
+
   const handleAllClick = () => {
     if (onAllProductsClick) {
-      onAllProductsClick(); // This resets all filters in ProductsContent
+      onAllProductsClick();
     }
     router.push("/products", { scroll: false });
   };
@@ -191,7 +209,7 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
     "https://images.unsplash.com/photo-1668365139546-fee374c0b678?w=800",
     "https://images.unsplash.com/photo-1551807306-69951ee44e70?w=800",
     "https://images.unsplash.com/photo-1586558284713-ba390c1a042a?q=80&w=687&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=687&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=800",
     "https://images.unsplash.com/photo-1738484708927-c1f45df0b56e?q=80&w=1167&auto=format&fit=crop",
     "https://plus.unsplash.com/premium_photo-1714841433964-2ea7e12d174a?q=80&w=688&auto=format&fit=crop",
@@ -303,7 +321,7 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
         {subcategories.map((sub, index) => (
           <div
             key={sub._id}
-            onClick={() => handleSubClick(sub._id)}
+            onClick={() => handleSubClick(sub)}
             className={cardClasses}
           >
             <div className="relative w-full h-full">
@@ -322,7 +340,7 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
             <div className="absolute bottom-0 left-0 right-0 p-5">
               <h3
                 className="text-white text-xl text-center drop-shadow-md"
-                style={{ fontFamily: "'Playfair Display', serif" }}
+                style={{ fontFamily: "'Playfair Display', serif" }} 
               >
                 {sub.name}
               </h3>
@@ -336,9 +354,9 @@ export function OccasionCards({ clickable = false, onAllProductsClick }) {
 
 export default function ShopByOccasion() {
   return (
-    <section id="occasion" className="py-6 lg:py-8">
+    <section id="occasion" className="py-4 lg:py-4">
       <div className="w-full px-4 lg:px-8">
-        <div className="relative mb-12 inline-block">
+        <div className="relative mb-4 inline-block">
           <h2
             className="text-3xl text-[#172554] pb-3"
             style={{
@@ -352,7 +370,6 @@ export default function ShopByOccasion() {
           <div className="absolute left-0 bottom-0 h-1 bg-pink-500 rounded-full w-full"></div>
         </div>
 
-        {/* Pass the reset function from parent (ProductsContent) here when using */}
         <OccasionCards clickable={true} />
       </div>
     </section>
