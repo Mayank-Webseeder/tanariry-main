@@ -65,6 +65,7 @@ export default function CheckoutPage() {
   );
 
   const tax = subtotal * 0.05;
+
   const total = subtotal + tax;
 
   useEffect(() => {
@@ -172,8 +173,6 @@ export default function CheckoutPage() {
         }
         return;
       }
-
-      // Online Payment Flow
       const isScriptLoaded = await loadRazorpayScript();
       if (!isScriptLoaded) {
         toast.error("Failed to load payment gateway");
@@ -439,9 +438,9 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
-        <div>
-          <StayInspired />
-        </div>
+          <div>
+            <StayInspired />
+          </div>
       </div>
     </>
   );
